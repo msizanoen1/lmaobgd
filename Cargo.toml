@@ -1,0 +1,17 @@
+[package]
+name = "lmaobgd"
+version = "0.1.0"
+authors = ["msizanoen1 <qtmlabs@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+diesel = { version = "1.4.3", features = ["postgres", "r2d2"] }
+actix-web = "2.0.0"
+actix-rt = "1.0.0"
+serde_json = "1.0.48"
+serde = { version = "1.0.104", features = ["derive"] }
+r2d2 = "0.8.8"
+failure = "0.1.7"
+exitfailure = "0.5.1"
+env_logger = "0.7.1"
+dotenv = "0.15.0"
