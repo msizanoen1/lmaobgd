@@ -39,14 +39,9 @@ class LmaoBGD {
         const allQElems = document.getElementsByClassName("question-box")
         for (const elem of allQElems) {
             const attrs = elem.attributes
-            let id
-            for (const attr of attrs) {
-                if (attr.name == "data-id") {
-                    this.questionIds.push(attr.value)
-                    id = attr.value
-                    this.questionsMap[id] = elem.innerText
-                }
-            }
+            let id = attrs.getNamedItem("data-id").value
+            this.questionsMap[id] = elem.innerText
+            this.questionIds.push(id)
             const inputs = elem.querySelectorAll('input[type="radio"]')
             let list = []
             for (const input of inputs) {
