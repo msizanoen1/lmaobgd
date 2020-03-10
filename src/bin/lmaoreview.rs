@@ -11,7 +11,7 @@ use std::env;
 use std::io::stdin;
 
 fn process_question(q: &str) -> String {
-    let mut iter = q
+    let mut vec = q
         .lines()
         .map(|s| s.trim())
         .filter(|s| *s != "")
@@ -20,9 +20,12 @@ fn process_question(q: &str) -> String {
                 && !s.starts_with("B:")
                 && !s.starts_with("C:")
                 && !s.starts_with("D:")
-        });
+        })
+        .collect::<Vec<_>>();
+    vec.truncate(vec.len() - 4);
+    let mut iter = vec.into_iter();
     format!(
-        "{} {}",
+        "{}. {}",
         iter.next().unwrap_or(""),
         iter.collect::<Vec<_>>().join("\n")
     )
