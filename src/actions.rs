@@ -44,6 +44,15 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .values(&question_map)
         .on_conflict_do_nothing()
         .execute(conn)?;
+    let group = data.group;
+    let group_text = data.group_text;
+    diesel::insert_into(groups::table)
+        .values(&NewGroup {
+            id: group,
+            text: &group_text,
+        })
+        .on_conflict_do_nothing()
+        .execute(conn)?;
     let answers = data
         .unknown_questions
         .into_iter()
@@ -55,6 +64,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
             answer_used: guess.answer_used,
             question_id: id,
             reviewed: false,
+            group_: Some(group),
         })
         .collect::<Vec<_>>();
     diesel::insert_into(answers::table)

@@ -7,6 +7,7 @@ table! {
         answer4 -> Int4,
         answer_used -> Int4,
         reviewed -> Bool,
+        group_ -> Nullable<Int4>,
     }
 }
 
@@ -18,16 +19,25 @@ table! {
 }
 
 table! {
+    groups (id) {
+        id -> Int4,
+        text -> Text,
+    }
+}
+
+table! {
     question_strings (question_id) {
         question_id -> Int4,
         question_string -> Text,
     }
 }
 
+joinable!(answers -> groups (group_));
 joinable!(answers -> question_strings (question_id));
 
 allow_tables_to_appear_in_same_query!(
     answers,
     answer_strings,
+    groups,
     question_strings,
 );
