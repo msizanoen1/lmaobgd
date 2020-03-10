@@ -53,8 +53,20 @@ fn main() -> Result<(), ExitFailure> {
     let _ = dotenv();
     let url = env::var("DATABASE_URL").context("unable to get DATABASE_URL")?;
     let db = PgConnection::establish(&url).context("unable to connect database")?;
+    let groups = groups::table
+        .get_results::<Group>(&db)
+        .context("unable to get tests")?;
+    println!("Tests available:");
+    for group in groups {
+        println!("{} ({})", group.id, group.text);
+    }
+    println!("Select test DB ID:");
+    let mut input = String::new();
+    stdin().read_line(&mut input)?;
+    let id = input.parse::<i32>()?;
     let unreviewed = answers::table
         .filter(answers::reviewed.eq(false))
+        .filter(answers::group_.eq(id))
         .get_results::<Answer>(&db)
         .context("unable to get unreviewed data")?;
     for answer in unreviewed {
