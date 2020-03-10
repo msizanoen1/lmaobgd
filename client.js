@@ -29,6 +29,38 @@ class LmaoBGD {
         }
     }
 
+    async upload(url="http://localhost:5000/api/upload") {
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/json',
+                },
+                body: JSON.stringify(this.serverPayload())
+            })
+            if (resp.ok) {
+                console.log("Upload complete")
+            } else {
+                console.error(`Error ${resp.stats} ${resp.statusText} ${resp.body}`)
+            }
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    async getData(url="http://localhost:5000/api/data") {
+        try {
+            const resp = await fetch(url)
+            if (resp.ok) {
+                this.answersData = JSON.parse(resp.body)
+            } else {
+                console.error(`Error ${resp.status} ${resp.statusText} ${resp.body}`)
+            }
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
     constructor(data, isInBrowser=false) {
         if (data == null) data = {}
         this.isInBrowser = isInBrowser

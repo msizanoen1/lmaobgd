@@ -26,4 +26,8 @@ table! {
 
 joinable!(answers -> question_strings (question_id));
 
-allow_tables_to_appear_in_same_query!(answers, answer_strings, question_strings,);
+allow_tables_to_appear_in_same_query!(
+    answers,
+    answer_strings,
+    question_strings,
+);
