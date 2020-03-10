@@ -63,7 +63,7 @@ fn main() -> Result<(), ExitFailure> {
     println!("Select test DB ID:");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
-    let id = input.parse::<i32>()?;
+    let id = input.trim().parse::<i32>()?;
     let unreviewed = answers::table
         .filter(answers::reviewed.eq(false))
         .filter(answers::group_.eq(id))
