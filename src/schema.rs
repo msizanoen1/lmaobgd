@@ -6,6 +6,7 @@ table! {
         answer3 -> Int4,
         answer4 -> Int4,
         answer_used -> Int4,
+        reviewed -> Bool,
     }
 }
 

@@ -1,17 +1,10 @@
-#[macro_use]
-extern crate diesel;
-
-mod actions;
-mod models;
-mod schema;
-
+use actix_web::{get, post, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
+use lmaobgd::{actions, models};
 use std::collections::HashMap;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
-
-use actix_web::{get, post, web, App, HttpResponse, HttpServer};
 
 #[post("/upload")]
 async fn api_upload(

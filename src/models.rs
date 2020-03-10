@@ -11,6 +11,7 @@ pub struct Answer {
     pub answer3: i32,
     pub answer4: i32,
     pub answer_used: i32,
+    pub reviewed: bool,
 }
 
 #[derive(Queryable)]

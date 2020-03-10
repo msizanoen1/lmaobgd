@@ -5,6 +5,20 @@ use diesel::prelude::*;
 use diesel::QueryResult;
 use std::collections::HashMap;
 
+pub fn get_answer_string(conn: &PgConnection, id: i32) -> QueryResult<String> {
+    Ok(answer_strings::table
+        .find(id)
+        .get_result::<AnswerMap>(conn)?
+        .answer_string)
+}
+
+pub fn get_question_string(conn: &PgConnection, id: i32) -> QueryResult<String> {
+    Ok(question_strings::table
+        .find(id)
+        .get_result::<QuestionMap>(conn)?
+        .question_string)
+}
+
 pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
     let answer_map = data
         .answer_map
@@ -40,6 +54,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
             answer4: guess.answers[3],
             answer_used: guess.answer_used,
             question_id: id,
+            reviewed: false,
         })
         .collect::<Vec<_>>();
     diesel::insert_into(answers::table)
@@ -50,6 +65,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
 
 pub fn js_get_data(conn: &PgConnection) -> QueryResult<HashMap<i32, i32>> {
     Ok(answers::table
+        .filter(answers::reviewed.eq(true))
         .get_results::<Answer>(conn)?
         .into_iter()
         .map(|ans| (ans.question_id, ans.answer_used))
