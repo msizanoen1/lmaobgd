@@ -1,6 +1,6 @@
 use actix_cors::Cors;
 use actix_web::http::header;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer};
+use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use lmaobgd::{actions, models};
@@ -47,9 +47,15 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let cm = ConnectionManager::new(&db);
     let pool = DbPool::builder().build(cm)?;
 
-    HttpServer::new(move || App::new().data(pool.clone()).service(api()).wrap(cors()))
-        .bind("0.0.0.0:5000")?
-        .run()
-        .await?;
+    HttpServer::new(move || {
+        App::new()
+            .data(pool.clone())
+            .service(api())
+            .wrap(cors())
+            .wrap(middleware::Logger::default())
+    })
+    .bind("0.0.0.0:5000")?
+    .run()
+    .await?;
     Ok(())
 }
