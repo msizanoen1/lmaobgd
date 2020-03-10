@@ -13,6 +13,8 @@ class LmaoBGD {
     answersOfQuestion = {}
     answersMap = {}
     unknownQuestions = {}
+    groupText = ''
+    groupId = null
 
     serverPayload() {
         const unknownQuestions = {}
@@ -26,6 +28,8 @@ class LmaoBGD {
             questionMap: this.questionsMap,
             answerMap: this.answersMap,
             unknownQuestions,
+            groupText: this.groupText,
+            group: this.groupId
         }
     }
 
@@ -68,6 +72,15 @@ class LmaoBGD {
     }
 
     runScrape() {
+        const titleSelector = "body .row .col-12 h1"
+        const idSelector = 'body .row .row .col-12 div'
+        const titleElem = document.querySelector(titleSelector)
+        this.groupText = titleElem.innerText
+        console.log(`Test name: ${this.groupText}`)
+        let idStr = document.querySelector(idSelector).innerText.split(':')
+        idStr.reverse()
+        this.groupId = Number(idStr[0].trim())
+        console.log(`Code: ${this.groupId}`)
         const allQElems = document.getElementsByClassName("question-box")
         for (const elem of allQElems) {
             const attrs = elem.attributes
