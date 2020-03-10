@@ -11,7 +11,8 @@ use std::env;
 use std::io::stdin;
 
 fn process_question(q: &str) -> String {
-    q.lines()
+    let mut iter = q
+        .lines()
         .map(|s| s.trim())
         .filter(|s| *s != "")
         .filter(|s| {
@@ -19,9 +20,12 @@ fn process_question(q: &str) -> String {
                 && !s.starts_with("B:")
                 && !s.starts_with("C:")
                 && !s.starts_with("D:")
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+        });
+    format!(
+        "{} {}",
+        iter.next().unwrap_or(""),
+        iter.collect::<Vec<_>>().join("\n")
+    )
 }
 
 fn get_question_string(db: &PgConnection, id: i32) -> QueryResult<String> {
@@ -30,12 +34,12 @@ fn get_question_string(db: &PgConnection, id: i32) -> QueryResult<String> {
 
 fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
     let answer = actions::get_answer_string(db, id)?;
-    Ok(answer
-        .lines()
-        .map(|s| s.trim())
-        .filter(|s| *s != "")
-        .collect::<Vec<_>>()
-        .join("\n"))
+    let mut iter = answer.lines().map(|s| s.trim()).filter(|s| *s != "");
+    Ok(format!(
+        "{} {}",
+        iter.next().unwrap_or(""),
+        iter.collect::<Vec<_>>().join("\n")
+    ))
 }
 
 fn main() -> Result<(), ExitFailure> {
