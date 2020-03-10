@@ -52,7 +52,7 @@ class LmaoBGD {
         try {
             const resp = await fetch(url)
             if (resp.ok) {
-                this.answersData = JSON.parse(resp.body)
+                this.answersData = await resp.json()
             } else {
                 console.error(`Error ${resp.status} ${resp.statusText} ${resp.body}`)
             }
