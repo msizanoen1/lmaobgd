@@ -121,6 +121,7 @@ class LmaoBGD {
             console.log(`${key} (${this.answersMap[key]}): ${answer} (${text})`)
         }
     }
-
 }
+
+window.LmaoBGD = LmaoBGD
 //module.exports = { LmaoBGD }

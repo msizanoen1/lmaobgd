@@ -1,3 +1,5 @@
+use actix_cors::Cors;
+use actix_web::http::header;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
@@ -29,6 +31,13 @@ fn api() -> actix_web::Scope {
     web::scope("/api").service(api_data).service(api_upload)
 }
 
+fn cors() -> actix_cors::CorsFactory {
+    Cors::new()
+        .allowed_methods(vec!["GET", "POST"])
+        .allowed_header(header::CONTENT_TYPE)
+        .finish()
+}
+
 #[actix_rt::main]
 async fn main() -> Result<(), exitfailure::ExitFailure> {
     env_logger::init();
@@ -38,7 +47,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let cm = ConnectionManager::new(&db);
     let pool = DbPool::builder().build(cm)?;
 
-    HttpServer::new(move || App::new().data(pool.clone()).service(api()))
+    HttpServer::new(move || App::new().data(pool.clone()).service(api()).wrap(cors()))
         .bind("0.0.0.0:5000")?
         .run()
         .await?;
