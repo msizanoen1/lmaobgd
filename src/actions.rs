@@ -69,6 +69,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .collect::<Vec<_>>();
     diesel::insert_into(answers::table)
         .values(&answers)
+        .on_conflict_do_nothing()
         .execute(conn)?;
     Ok(())
 }
