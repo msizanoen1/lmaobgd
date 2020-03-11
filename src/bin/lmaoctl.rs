@@ -7,8 +7,8 @@ use failure::ResultExt;
 use lmaobgd::actions;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
-use std::env;
 use std::io::stdin;
+use structopt::StructOpt;
 
 fn process_question(q: &str) -> String {
     let (mut vec, n) = q.lines().map(|s| s.trim()).filter(|s| *s != "").fold(
@@ -49,13 +49,106 @@ fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
     ))
 }
 
+#[derive(StructOpt)]
+enum Command {
+    Review,
+    ViewData,
+    DeleteQuestion { id: i32 },
+}
+
+#[derive(StructOpt)]
+struct Args {
+    #[structopt(short, long, env = "DATABASE_URL")]
+    database_url: String,
+    #[structopt(subcommand)]
+    command: Command,
+}
+
 fn main() -> Result<(), ExitFailure> {
     let _ = dotenv();
-    let url = env::var("DATABASE_URL").context("unable to get DATABASE_URL")?;
+    let args = Args::from_args();
+    let url = args.database_url;
     let db = PgConnection::establish(&url).context("unable to connect database")?;
-    let groups = groups::table
-        .get_results::<Group>(&db)
-        .context("unable to get tests")?;
+    match args.command {
+        Command::Review => review(db)?,
+        Command::ViewData => view(db)?,
+        Command::DeleteQuestion { id } => del_question(db, id)?,
+    }
+    Ok(())
+}
+
+fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
+    diesel::delete(answers::table.find(id)).execute(&db)?;
+    Ok(())
+}
+
+fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
+    Ok(groups::table
+        .get_results(db)
+        .context("unable to get groups")?)
+}
+
+fn view(db: PgConnection) -> Result<(), failure::Error> {
+    let groups = groups(&db)?;
+    println!("Tests available:");
+    for group in groups {
+        println!("{} ({})", group.id, group.text);
+    }
+    println!("Select test DB ID:");
+    let mut input = String::new();
+    stdin().read_line(&mut input)?;
+    let id: i32 = input.trim().parse()?;
+    let answers = answers::table
+        .filter(answers::group_.eq(id))
+        .get_results::<Answer>(&db)
+        .context("unable to get answers")?;
+    println!("Questions:");
+    for answer in answers {
+        let question_id = answer.question_id;
+        let reviewed = if answer.reviewed {
+            "reviewed"
+        } else {
+            "unreviewed"
+        };
+        let text = get_question_string(&db, question_id)?;
+        println!("{} ({}) ({})", question_id, reviewed, text);
+    }
+    println!("Enter question ID:");
+    input.clear();
+    stdin().read_line(&mut input)?;
+    let id: i32 = input.trim().parse()?;
+    let question = answers::table.find(id).get_result::<Answer>(&db)?;
+    println!("Possible answers:");
+    println!(
+        "{} ({})",
+        question.answer1,
+        get_answer_string(&db, question.answer1)?
+    );
+    println!(
+        "{} ({})",
+        question.answer2,
+        get_answer_string(&db, question.answer2)?
+    );
+    println!(
+        "{} ({})",
+        question.answer3,
+        get_answer_string(&db, question.answer3)?
+    );
+    println!(
+        "{} ({})",
+        question.answer4,
+        get_answer_string(&db, question.answer4)?
+    );
+    println!(
+        "Answer used: {} ({})",
+        question.answer_used,
+        get_answer_string(&db, question.answer_used)?
+    );
+    Ok(())
+}
+
+fn review(db: PgConnection) -> Result<(), failure::Error> {
+    let groups = groups(&db)?;
     println!("Tests available:");
     for group in groups {
         println!("{} ({})", group.id, group.text);
