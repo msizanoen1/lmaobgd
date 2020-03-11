@@ -159,4 +159,4 @@ class LmaoBGD {
   }
 }
 
-window.LmaoBGD = LmaoBGD;
+(window as any).LmaoBGD = LmaoBGD;
