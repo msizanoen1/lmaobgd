@@ -159,6 +159,4 @@ class LmaoBGD {
   }
 }
 
-declare const global: any;
-
-global.LmaoBGD = LmaoBGD;
+(window as any).LmaoBGD = LmaoBGD;
