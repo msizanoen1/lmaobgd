@@ -21,6 +21,12 @@ class LmaoBGD {
         answerUsed: this.unknownQuestions.get(key)
       };
     }
+    for (const key of this.questionsMap.keys()) {
+        payload.questionMap[key] = this.questionsMap.get(key);
+    }
+    for (const key of this.answersMap.keys()) {
+        payload.answerMap[key] = this.answersMap.get(key);
+    }
     return payload;
   }
 
