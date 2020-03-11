@@ -1,4 +1,4 @@
-export class LmaoBGD {
+class LmaoBGD {
   questionIds: number[] = [];
   questionsMap: Map<number, string> = new Map();
   answersOfQuestion: Map<number, number[]> = new Map();
