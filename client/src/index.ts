@@ -47,9 +47,9 @@ class LmaoBGD {
     try {
       const resp = await fetch(url);
       if (resp.ok) {
-        const json: any = resp.json();
-        for (const key of json) {
-          this.answersData.set(key, json[key]);
+        const json: any = await resp.json();
+        for (const key in json) {
+          this.answersData.set(parseInt(key), json[key]);
         }
       } else {
         console.error(`Error ${resp.status} ${resp.statusText} ${resp.body}`);
@@ -154,7 +154,7 @@ class LmaoBGD {
       const answer = this.unknownQuestions.get(key);
       if (answer == null) continue;
       const text = this.answersMap.get(answer);
-      console.log(`${key} (${this.answersMap.get(key)}): ${answer} (${text})`);
+      console.log(`${key} (${this.questionsMap.get(key)}): ${answer} (${text})`);
     }
   }
 }
