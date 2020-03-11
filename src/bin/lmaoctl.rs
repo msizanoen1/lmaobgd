@@ -118,6 +118,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     stdin().read_line(&mut input)?;
     let id: i32 = input.trim().parse()?;
     let question = answers::table.find(id).get_result::<Answer>(&db)?;
+    println!("Question {}: {}", id, get_question_string(&db, id)?);
     println!("Possible answers:");
     println!(
         "{} ({})",
