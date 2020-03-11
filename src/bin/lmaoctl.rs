@@ -167,7 +167,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
 }
 
 fn review(db: PgConnection) -> Result<(), failure::Error> {
-    let groups = groups_unrev(&db)?;
+    let groups = group_unrev(&db)?;
     println!("Tests available:");
     for group in groups {
         println!("{} ({})", group.id, group.text);
