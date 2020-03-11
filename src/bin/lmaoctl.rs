@@ -53,6 +53,7 @@ fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
 enum Command {
     Review,
     ViewData,
+    DeleteQuestion { id: i32 },
 }
 
 #[derive(StructOpt)]
@@ -71,7 +72,13 @@ fn main() -> Result<(), ExitFailure> {
     match args.command {
         Command::Review => review(db)?,
         Command::ViewData => view(db)?,
+        Command::DeleteQuestion { id } => del_question(db, id)?,
     }
+    Ok(())
+}
+
+fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
+    diesel::delete(answers::table.find(id)).execute(&db)?;
     Ok(())
 }
 
