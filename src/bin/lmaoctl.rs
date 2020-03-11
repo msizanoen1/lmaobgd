@@ -227,6 +227,7 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
             } else {
                 continue;
             }
+            print!("{}[2J", 27 as char);
             break;
         }
     }
