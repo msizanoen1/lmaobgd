@@ -1,3 +1,4 @@
+use diesel::dsl::exists;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::QueryResult;
@@ -84,6 +85,23 @@ fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
 
 fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
     Ok(groups::table
+        .filter(exists(
+            answers::table.filter(groups::id.nullable().eq(answers::group_)),
+        ))
+        .get_results(db)
+        .context("unable to get groups")?)
+}
+
+fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
+    Ok(groups::table
+        .filter(exists(
+            answers::table.filter(
+                groups::id
+                    .nullable()
+                    .eq(answers::group_)
+                    .and(answers::reviewed.eq(false)),
+            ),
+        ))
         .get_results(db)
         .context("unable to get groups")?)
 }
@@ -149,7 +167,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
 }
 
 fn review(db: PgConnection) -> Result<(), failure::Error> {
-    let groups = groups(&db)?;
+    let groups = groups_unrev(&db)?;
     println!("Tests available:");
     for group in groups {
         println!("{} ({})", group.id, group.text);
