@@ -1,7 +1,6 @@
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
-use failure::Error;
 use lmaobgd::actions;
 use lmaobgd::models::*;
 use lmaobgd::webdriver::*;
@@ -23,7 +22,7 @@ struct Args {
     test_url: String,
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), exitfailure::ExitFailure> {
     let _ = dotenv();
     let args = Args::from_args();
     let db = PgConnection::establish(&args.database_url)?;
