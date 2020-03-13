@@ -24,7 +24,7 @@ impl WebDriver {
         };
         let client = Client::new();
         let url = format!("{}/session", url);
-        let session = client
+        let session: WdResponse<_> = client
             .post(&url)
             .json(&req)
             .send()?
@@ -32,7 +32,7 @@ impl WebDriver {
             .json()?;
         Ok(Self {
             url: url.into(),
-            session,
+            session: session.value,
             client,
         })
     }
@@ -58,7 +58,8 @@ impl WebDriver {
             .json(&req)
             .send()?
             .error_for_status()?
-            .json()?)
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn get_element<T: Into<String>>(
@@ -82,7 +83,8 @@ impl WebDriver {
             .json(&req)
             .send()?
             .error_for_status()?
-            .json()?)
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn get_elements_from_element<T: Into<String>>(
@@ -108,7 +110,8 @@ impl WebDriver {
             .json(&req)
             .send()?
             .error_for_status()?
-            .json()?)
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn get_element_from_element<T: Into<String>>(
@@ -134,7 +137,8 @@ impl WebDriver {
             .json(&req)
             .send()?
             .error_for_status()?
-            .json()?)
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn element_click(&self, element: &WebElement) -> Result<(), Error> {
@@ -160,7 +164,13 @@ impl WebDriver {
             element = element.element_id,
             name = attr
         );
-        Ok(self.client.get(&url).send()?.error_for_status()?.json()?)
+        Ok(self
+            .client
+            .get(&url)
+            .send()?
+            .error_for_status()?
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn get_element_text(&self, element: &WebElement) -> Result<String, Error> {
@@ -170,7 +180,13 @@ impl WebDriver {
             session = self.session.session_id,
             element = element.element_id
         );
-        Ok(self.client.get(&url).send()?.error_for_status()?.json()?)
+        Ok(self
+            .client
+            .get(&url)
+            .send()?
+            .error_for_status()?
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn element_send_keys<T: Into<String>>(
@@ -199,9 +215,7 @@ impl WebDriver {
             base = self.url,
             session = self.session.session_id
         );
-        let req = NavigateRequest {
-            url: url.into(),
-        };
+        let req = NavigateRequest { url: url.into() };
         self.client
             .post(&requrl)
             .json(&req)
@@ -252,6 +266,11 @@ pub struct WebElement {
 pub struct WebDriverSession {
     pub session_id: String,
     pub capabilities: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WdResponse<T> {
+    value: T,
 }
 
 #[derive(Serialize, Deserialize)]
