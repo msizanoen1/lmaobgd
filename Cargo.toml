@@ -17,3 +17,6 @@ env_logger = "0.7.1"
 dotenv = "0.15.0"
 actix-cors = "0.2.0"
 structopt = "0.3.11"
+reqwest = { version = "0.10.4", features = ["json", "blocking"] }
+rand = "0.7.3"
+tokio = { version = "0.2.13", features = ["rt-threaded", "macros", "blocking", "time"] }
