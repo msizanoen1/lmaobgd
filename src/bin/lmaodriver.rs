@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
     let id = id_str
         .rsplit(':')
         .nth(0)
-        .map(|x| x.parse::<i32>())
+        .map(|x| x.trim().parse::<i32>())
         .transpose()?
         .unwrap_or(0);
     let questions = wd.get_elements(Using::CssSelector, ".question-box")?;
