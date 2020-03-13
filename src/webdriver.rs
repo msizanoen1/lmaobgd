@@ -230,6 +230,28 @@ impl WebDriver {
         Ok(())
     }
 
+    pub fn run_script_unit<T>(&self, script: T) -> Result<(), Error>
+    where
+        T: Into<String> + Serialize,
+    {
+        let url = format!(
+            "{base}/session/{session}/execute/sync",
+            base=self.url,
+            session=self.session.session_id
+        );
+        let data = json!({
+            "args": [],
+            "script": script,
+        });
+        self
+            .client
+            .post(&url)
+            .json(&data)
+            .send()?
+            .error_for_status()?;
+        Ok(())
+    }
+
     pub fn run_script_elem<T, V>(&self, script: T, element: &WebElement) -> Result<V, Error>
     where
         T: Into<String>,
