@@ -173,6 +173,27 @@ impl WebDriver {
             .value)
     }
 
+    pub fn get_element_prop<T: serde::de::DeserializeOwned>(
+        &self,
+        element: &WebElement,
+        prop: &str,
+    ) -> Result<T, Error> {
+        let url = format!(
+            "{base}/session/{session}/element/{element}/property/{name}",
+            base = self.url,
+            session = self.session.session_id,
+            element = element.element_id,
+            name = prop
+        );
+        Ok(self
+            .client
+            .get(&url)
+            .send()?
+            .error_for_status()?
+            .json::<WdResponse<_>>()?
+            .value)
+    }
+
     pub fn get_element_text(&self, element: &WebElement) -> Result<String, Error> {
         let url = format!(
             "{base}/session/{session}/element/{element}/text",
@@ -207,6 +228,30 @@ impl WebDriver {
             .send()?
             .error_for_status()?;
         Ok(())
+    }
+
+    pub fn run_script_elem<T, V>(&self, script: T, element: &WebElement) -> Result<V, Error>
+    where
+        T: Into<String>,
+        V: serde::de::DeserializeOwned,
+    {
+        let url = format!(
+            "{base}/session/{session}/execute/sync",
+            base = self.url,
+            session = self.session.session_id
+        );
+        let req = ScriptInvokeElem {
+            args: [element.clone()],
+            script: script.into(),
+        };
+        Ok(self
+            .client
+            .post(&url)
+            .json(&req)
+            .send()?
+            .error_for_status()?
+            .json::<WdResponse<_>>()?
+            .value)
     }
 
     pub fn navigate<T: Into<String>>(&self, url: T) -> Result<(), Error> {
@@ -256,6 +301,12 @@ pub struct ElementRequest {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct ScriptInvokeElem {
+    pub script: String,
+    pub args: [WebElement; 1],
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct WebElement {
     #[serde(rename = "element-6066-11e4-a52e-4f735466cecf")]
     pub element_id: String,

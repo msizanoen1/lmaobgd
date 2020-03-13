@@ -8,8 +8,6 @@ use lmaobgd::webdriver::*;
 use rand::prelude::*;
 use std::collections::HashMap;
 use std::env;
-use std::thread;
-use std::time::Duration;
 
 fn main() -> Result<(), Error> {
     let _ = dotenv();
@@ -21,19 +19,15 @@ fn main() -> Result<(), Error> {
     let test_url = args.next().unwrap();
     let wd = WebDriver::new(endpoint, HashMap::new(), Vec::new())?;
     wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")?;
-    thread::sleep(Duration::from_secs(2));
     let username = wd.get_element(Using::CssSelector, "#UserName")?;
     let password = wd.get_element(Using::CssSelector, "#Password")?;
     wd.element_send_keys(&username, &user)?;
     wd.element_send_keys(&password, &user)?;
     let button = wd.get_element(Using::CssSelector, "#AjaxLogin")?;
     wd.element_click(&button)?;
-    thread::sleep(Duration::from_secs(2));
     wd.navigate(&test_url)?;
-    thread::sleep(Duration::from_secs(2));
     let start = wd.get_element(Using::CssSelector, "#start-test")?;
     wd.element_click(&start)?;
-    thread::sleep(Duration::from_secs(2));
     let title_elem = wd.get_element(Using::CssSelector, "body .row .col-12 h1")?;
     let id_elem = wd.get_element(Using::CssSelector, "body .row .row .col-12 div")?;
     let title = wd.get_element_text(&title_elem)?;
@@ -57,7 +51,10 @@ fn main() -> Result<(), Error> {
         let mut answers = [0; 4];
         for (idx, input) in inputs.into_iter().enumerate() {
             let a_id = wd.get_element_attr(&input, "value")?.parse::<i32>()?;
-            let a_text = wd.get_element_text(&input)?;
+            let a_text = wd.run_script_elem(
+                "return arguments[0].parentNode.parentNode.innerText;",
+                &input,
+            )?;
             answer_maps.insert(a_id, a_text);
             answers[idx] = a_id;
         }
