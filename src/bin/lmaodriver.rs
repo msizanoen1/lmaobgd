@@ -7,16 +7,29 @@ use lmaobgd::models::*;
 use lmaobgd::webdriver::*;
 use rand::prelude::*;
 use std::collections::HashMap;
-use std::env;
+use structopt::StructOpt;
+
+/// LmaoBGD WebDriver
+#[derive(StructOpt)]
+struct Args {
+    /// URL for PostgreSQL database
+    #[structopt(short, long, env = "DATABASE_URL")]
+    database_url: String,
+    /// WebDriver server URL
+    webdriver_url: String,
+    /// Account ID
+    id: String,
+    /// URL to navigate
+    test_url: String,
+}
 
 fn main() -> Result<(), Error> {
     let _ = dotenv();
-    let dbu = env::var("DATABASE_URL")?;
-    let db = PgConnection::establish(&dbu)?;
-    let mut args = env::args().skip(1);
-    let endpoint = args.next().unwrap();
-    let user = args.next().unwrap();
-    let test_url = args.next().unwrap();
+    let args = Args::from_args();
+    let db = PgConnection::establish(&args.database_url)?;
+    let endpoint = args.webdriver_url;
+    let user = args.id;
+    let test_url = args.test_url;
     let wd = WebDriver::new(endpoint, HashMap::new(), Vec::new())?;
     wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")?;
     let username = wd.get_element(Using::CssSelector, "#UserName")?;
