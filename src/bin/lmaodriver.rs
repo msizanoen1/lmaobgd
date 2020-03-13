@@ -8,6 +8,32 @@ use rand::prelude::*;
 use std::collections::HashMap;
 use structopt::StructOpt;
 
+fn process_question(q: &str) -> String {
+    let (mut vec, n) = q.lines().map(|s| s.trim()).filter(|s| *s != "").fold(
+        (Vec::new(), 0),
+        |(mut acc, i), e| {
+            if e.starts_with("A:")
+                || e.starts_with("B:")
+                || e.starts_with("C:")
+                || e.starts_with("D:")
+            {
+                (acc, i + 1)
+            } else {
+                acc.push(e);
+                (acc, i)
+            }
+        },
+    );
+    vec.truncate(vec.len() - n);
+    let mut iter = vec.into_iter();
+    format!(
+        "{}. {}",
+        iter.next().unwrap_or(""),
+        iter.collect::<Vec<_>>().join("\n")
+    )
+}
+
+
 /// LmaoBGD WebDriver
 #[derive(StructOpt)]
 struct Args {
@@ -56,6 +82,8 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
         .map(|x| x.trim().parse::<i32>())
         .transpose()?
         .unwrap_or(0);
+    println!("Test name: {}", title);
+    println!("Test ID: {}", id);
     let questions = wd.get_elements(Using::CssSelector, ".question-box")?;
     let mut question_maps = HashMap::new();
     let mut answer_maps = HashMap::new();
@@ -63,6 +91,8 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
     for question in questions {
         let q_id = wd.get_element_attr(&question, "data-id")?.parse::<i32>()?;
         let q_text = wd.get_element_text(&question)?;
+        let q_text_d = process_question(&q_text);
+        println!("Question {}: {}", q_id, q_text_d);
         question_maps.insert(q_id, q_text);
         let inputs =
             wd.get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)?;
