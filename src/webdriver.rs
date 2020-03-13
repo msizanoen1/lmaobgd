@@ -23,9 +23,9 @@ impl WebDriver {
             },
         };
         let client = Client::new();
-        let url = format!("{}/session", url);
+        let new_url = format!("{}/session", url);
         let session: WdResponse<_> = client
-            .post(&url)
+            .post(&new_url)
             .json(&req)
             .send()?
             .error_for_status()?
