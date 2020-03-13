@@ -83,6 +83,7 @@ fn main() -> Result<(), Error> {
         wd.element_click(&radio)?;
     }
     wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#)?;
+    wd.close()?;
     let unknown_questions = unknowns
         .into_iter()
         .map(|(q_id, answer_used)| {

@@ -236,15 +236,14 @@ impl WebDriver {
     {
         let url = format!(
             "{base}/session/{session}/execute/sync",
-            base=self.url,
-            session=self.session.session_id
+            base = self.url,
+            session = self.session.session_id
         );
         let data = json!({
             "args": [],
             "script": script,
         });
-        self
-            .client
+        self.client
             .post(&url)
             .json(&data)
             .send()?
@@ -288,6 +287,16 @@ impl WebDriver {
             .json(&req)
             .send()?
             .error_for_status()?;
+        Ok(())
+    }
+
+    pub fn close(self) -> Result<(), Error> {
+        let url = format!(
+            "{base}/session/{session}",
+            base = self.url,
+            session = self.session.session_id
+        );
+        self.client.delete(&url).send()?.error_for_status()?;
         Ok(())
     }
 }
