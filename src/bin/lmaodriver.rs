@@ -14,6 +14,9 @@ struct Args {
     /// URL for PostgreSQL database
     #[structopt(short, long, env = "DATABASE_URL")]
     database_url: String,
+    /// Dont't auto close after 30s
+    #[structopt(short, long)]
+    no_autoclose: bool,
     /// WebDriver server URL
     webdriver_url: String,
     /// Account ID
@@ -95,8 +98,10 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
         wd.element_click(&radio)?;
     }
     wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#)?;
-    std::thread::sleep(std::time::Duration::from_secs(30));
-    wd.close()?;
+    if !args.no_autoclose {
+        std::thread::sleep(std::time::Duration::from_secs(30));
+        wd.close()?;
+    }
     let unknown_questions = unknowns
         .into_iter()
         .map(|(q_id, answer_used)| {
