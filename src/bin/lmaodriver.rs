@@ -33,7 +33,6 @@ fn process_question(q: &str) -> String {
     )
 }
 
-
 /// LmaoBGD WebDriver
 #[derive(StructOpt)]
 struct Args {
@@ -87,7 +86,7 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
     let questions = wd.get_elements(Using::CssSelector, ".question-box")?;
     let mut question_maps = HashMap::new();
     let mut answer_maps = HashMap::new();
-    let mut answer_of_questions = HashMap::new();
+    let mut answer_of_questions = Vec::new();
     for question in questions {
         let q_id = wd.get_element_attr(&question, "data-id")?.parse::<i32>()?;
         let q_text = wd.get_element_text(&question)?;
@@ -106,7 +105,7 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
             answer_maps.insert(a_id, a_text);
             answers[idx] = a_id;
         }
-        answer_of_questions.insert(q_id, answers);
+        answer_of_questions.push((q_id, answers));
     }
     let data = actions::js_get_data(&db)?;
     let mut unknowns = HashMap::new();
@@ -116,7 +115,7 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
             None => {
                 let idx = rand::thread_rng().gen_range(0, 4);
                 let a = answers[idx];
-                unknowns.insert(q_id, a);
+                unknowns.insert(*q_id, a);
                 a
             }
         };
@@ -137,12 +136,13 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
             wd.close()?;
         }
     }
+    let answer_of_questions = answer_of_questions.into_iter().collect::<HashMap<_, _>>();
     let unknown_questions = unknowns
         .into_iter()
         .map(|(q_id, answer_used)| {
             let answers = *answer_of_questions.get(&q_id).unwrap();
             (
-                *q_id,
+                q_id,
                 UnknownQuestion {
                     answers,
                     answer_used,
