@@ -251,10 +251,11 @@ impl WebDriver {
         Ok(())
     }
 
-    pub fn run_script_elem<T, V>(&self, script: T, element: &WebElement) -> Result<V, Error>
+    pub fn run_script_elem<T, V, S>(&self, script: T, element: &S) -> Result<V, Error>
     where
         T: Into<String>,
         V: serde::de::DeserializeOwned,
+        S: Serialize,
     {
         let url = format!(
             "{base}/session/{session}/execute/sync",
@@ -332,9 +333,9 @@ pub struct ElementRequest {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ScriptInvokeElem {
+pub struct ScriptInvokeElem<T> {
     pub script: String,
-    pub args: [WebElement; 1],
+    pub args: [T; 1],
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -85,8 +85,9 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
     println!("Test ID: {}", id);
     let questions = wd.get_elements(Using::CssSelector, ".question-box")?;
     let mut question_maps = HashMap::new();
-    let mut answer_maps = HashMap::new();
+    //let mut answer_maps = HashMap::new();
     let mut answer_of_questions = Vec::new();
+    let mut queue = Vec::new();
     for question in questions {
         let q_id = wd.get_element_attr(&question, "data-id")?.parse::<i32>()?;
         let q_text = wd.get_element_text(&question)?;
@@ -98,15 +99,23 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
         let mut answers = [0; 4];
         for (idx, input) in inputs.into_iter().enumerate() {
             let a_id = wd.get_element_attr(&input, "value")?.parse::<i32>()?;
+            queue.push(input.clone());
+            /*
             let a_text = wd.run_script_elem(
                 "return arguments[0].parentNode.parentNode.innerText;",
                 &input,
             )?;
             answer_maps.insert(a_id, a_text);
+            */
             answers[idx] = a_id;
         }
         answer_of_questions.push((q_id, answers));
     }
+    let answer_maps: Vec<(_, _)> = wd.run_script_elem(
+        "return arguments[0].map(elem => [parseInt(elem.value), elem.parentNode.parentNode.innerText]);",
+        &queue,
+    )?;
+    let answer_maps: HashMap<_, _> = answer_maps.into_iter().collect();
     let data = actions::js_get_data(&db)?;
     let mut unknowns = HashMap::new();
     for (q_id, answers) in &answer_of_questions {
