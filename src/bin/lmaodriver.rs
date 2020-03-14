@@ -96,7 +96,12 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
         question_maps.insert(q_id, q_text);
         let inputs =
             wd.get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)?;
-        let mut answers = [0; 4];
+        let answers: [i32; 4] = wd.run_script_elem(
+            "return arguments[0].map(elem => parseInt(elem.value));",
+            &inputs,
+        )?;
+        queue.extend(inputs.iter().cloned());
+        /*
         for (idx, input) in inputs.into_iter().enumerate() {
             let a_id = wd.get_element_attr(&input, "value")?.parse::<i32>()?;
             queue.push(input.clone());
@@ -109,6 +114,7 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
             */
             answers[idx] = a_id;
         }
+        */
         answer_of_questions.push((q_id, answers));
     }
     let answer_maps: Vec<(_, _)> = wd.run_script_elem(
