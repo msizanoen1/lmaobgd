@@ -127,6 +127,8 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             .get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)
             .await?;
         let mut answers = [0; 4];
+        let mut answered = false;
+        let cur_answer = data.get(&q_id).copied();
         for (idx, input) in inputs.into_iter().enumerate() {
             let a_id = wd.get_element_attr(&input, "value").await?.parse::<i32>()?;
             let a_text = wd
@@ -137,20 +139,26 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
                 .await?;
             answer_maps.insert(a_id, a_text);
             answers[idx] = a_id;
+            if cur_answer == Some(a_id) {
+                wd.element_click(&input).await?;
+                answered = true;
+            }
         }
-        let cur_answer = data.get(&q_id).copied().unwrap_or_else(|| {
-            let idx = rand::thread_rng().gen_range(0, 4);
-            unknowns.insert(q_id, answers[idx]);
-            answers[idx]
-        });
-        let radio = wd
-            .get_element_from_element(
-                &question,
-                Using::CssSelector,
-                format!(r#"input[value="{answer}"]"#, answer = cur_answer),
-            )
-            .await?;
-        wd.element_click(&radio).await?;
+        if !answered {
+            let cur_answer = data.get(&q_id).copied().unwrap_or_else(|| {
+                let idx = rand::thread_rng().gen_range(0, 4);
+                unknowns.insert(q_id, answers[idx]);
+                answers[idx]
+            });
+            let radio = wd
+                .get_element_from_element(
+                    &question,
+                    Using::CssSelector,
+                    format!(r#"input[value="{answer}"]"#, answer = cur_answer),
+                )
+                .await?;
+            wd.element_click(&radio).await?;
+        }
 
         answer_of_questions.insert(q_id, answers);
     }
