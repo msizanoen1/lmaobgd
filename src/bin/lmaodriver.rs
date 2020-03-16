@@ -56,6 +56,9 @@ struct Args {
     /// Headless mode
     #[structopt(short, long)]
     headless: bool,
+    /// Fetch question text even when in database
+    #[structopt(short, long)]
+    force_fetch: bool,
     /// WebDriver server URL
     webdriver_url: String,
     /// Account ID
@@ -147,7 +150,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             .get_element_attr(&question, "data-id")
             .await?
             .parse::<i32>()?;
-        if !question_avail.contains(&q_id) {
+        if !question_avail.contains(&q_id) || args.force_fetch {
             let q_text = wd.get_element_text(&question).await?;
             println!("Question {}: {}", q_id, process_question(&q_text));
             question_maps.insert(q_id, q_text);
