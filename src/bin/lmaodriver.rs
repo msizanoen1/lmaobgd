@@ -191,7 +191,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     if !args.no_submit {
         wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#).await?;
         if !args.no_autoclose {
-            delay_for(Duration::from_secs(30)).await;
+            delay_for(Duration::from_secs(15)).await;
             wd.close().await?;
         }
     }
