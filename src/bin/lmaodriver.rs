@@ -131,12 +131,10 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let cur_answer = data.get(&q_id).copied();
         for (idx, input) in inputs.into_iter().enumerate() {
             let a_id = wd.get_element_attr(&input, "value").await?.parse::<i32>()?;
-            let a_text = wd
-                .run_script_elem(
-                    "return arguments[0].parentNode.parentNode.innerText;",
-                    &input,
-                )
+            let a_pe = wd
+                .get_element_from_element(&input, Using::XPath, "../..")
                 .await?;
+            let a_text = wd.get_element_text(&a_pe).await?;
             answer_maps.insert(a_id, a_text);
             answers[idx] = a_id;
             if cur_answer == Some(a_id) {
