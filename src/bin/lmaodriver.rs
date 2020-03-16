@@ -1,12 +1,14 @@
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
+use failure::Error;
 use lmaobgd::actions;
 use lmaobgd::models::*;
+use lmaobgd::schema::*;
 use lmaobgd::webdriver::*;
 use rand::prelude::*;
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Mutex;
 use structopt::StructOpt;
@@ -68,6 +70,29 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let db = Arc::new(Mutex::new(
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
+    let db2 = Arc::clone(&db);
+    let question_avail = spawn_blocking(move || {
+        Ok::<_, Error>(
+            question_strings::table
+                .select(question_strings::question_id)
+                .load::<i32>(&db2.lock().unwrap() as &PgConnection)?
+                .into_iter()
+                .collect::<HashSet<_>>(),
+        )
+    })
+    .await??;
+    let db2 = Arc::clone(&db);
+    let answer_avail = spawn_blocking(move || {
+        Ok::<_, Error>(
+            answer_strings::table
+                .select(answer_strings::answer_id)
+                .load::<i32>(&db2.lock().unwrap() as &PgConnection)?
+                .into_iter()
+                .collect::<HashSet<_>>(),
+        )
+    })
+    .await??;
+
     let endpoint = args.webdriver_url;
     let user = args.id;
     let test_url = args.test_url;
@@ -120,12 +145,11 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             .get_element_attr(&question, "data-id")
             .await?
             .parse::<i32>()?;
-        let q_title = wd
-            .get_element_from_element(&question, Using::CssSelector, ".row")
-            .await?;
-        let q_text = wd.get_element_text(&q_title).await?;
-        println!("Question {}: {}", q_id, process_question(&q_text));
-        question_maps.insert(q_id, q_text);
+        if !question_avail.contains(&q_id) {
+            let q_text = wd.get_element_text(&question).await?;
+            println!("Question {}: {}", q_id, process_question(&q_text));
+            question_maps.insert(q_id, q_text);
+        }
         let inputs = wd
             .get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)
             .await?;
@@ -134,13 +158,15 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let cur_answer = data.get(&q_id).copied();
         for (idx, input) in inputs.into_iter().enumerate() {
             let a_id = wd.get_element_attr(&input, "value").await?.parse::<i32>()?;
-            let a_text = wd
-                .run_script_elem(
-                    "return arguments[0].parentNode.parentNode.innerText;",
-                    &input,
-                )
-                .await?;
-            answer_maps.insert(a_id, a_text);
+            if !answer_avail.contains(&a_id) {
+                let a_text = wd
+                    .run_script_elem(
+                        "return arguments[0].parentNode.parentNode.innerText;",
+                        &input,
+                    )
+                    .await?;
+                answer_maps.insert(a_id, a_text);
+            }
             answers[idx] = a_id;
             if cur_answer == Some(a_id) {
                 wd.element_click(&input).await?;
