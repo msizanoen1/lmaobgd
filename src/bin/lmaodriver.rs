@@ -120,7 +120,10 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             .get_element_attr(&question, "data-id")
             .await?
             .parse::<i32>()?;
-        let q_text = wd.get_element_text(&question).await?;
+        let q_title = wd
+            .get_element_from_element(&question, Using::CssSelector, ".question-box-title")
+            .await?;
+        let q_text = wd.get_element_text(&q_title).await?;
         println!("Question {}: {}", q_id, process_question(&q_text));
         question_maps.insert(q_id, q_text);
         let inputs = wd
