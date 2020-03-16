@@ -157,9 +157,11 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             .get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)
             .await?;
         let mut answers = [0; 4];
+        let mut input_elems = Vec::new();
         let mut answered = false;
         let cur_answer = data.get(&q_id).copied();
         for (idx, input) in inputs.into_iter().enumerate() {
+            input_elems.push(input.clone());
             let a_id = wd.get_element_attr(&input, "value").await?.parse::<i32>()?;
             if !answer_avail.contains(&a_id) {
                 let a_text = wd
@@ -179,15 +181,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         if !answered {
             let idx = rand::thread_rng().gen_range(0, 4);
             unknowns.insert(q_id, answers[idx]);
-            let cur_answer = answers[idx];
-            let radio = wd
-                .get_element_from_element(
-                    &question,
-                    Using::CssSelector,
-                    format!(r#"input[value="{answer}"]"#, answer = cur_answer),
-                )
-                .await?;
-            wd.element_click(&radio).await?;
+            wd.element_click(&input_elems[idx]).await?;
         }
 
         answer_of_questions.insert(q_id, answers);
