@@ -80,6 +80,8 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             }),
         );
     }
+    let db2 = Arc::clone(&db);
+    let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
     let wd = WebDriver::new(endpoint, HashMap::new(), vec![caps]).await?;
     wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
         .await?;
@@ -110,8 +112,9 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     println!("Test ID: {}", id);
     let questions = wd.get_elements(Using::CssSelector, ".question-box").await?;
     let mut question_maps = HashMap::new();
-    let mut answer_of_questions = Vec::new();
+    let mut answer_of_questions = HashMap::new();
     let mut answer_maps = HashMap::new();
+    let mut unknowns = HashMap::new();
     for question in questions {
         let q_id = wd
             .get_element_attr(&question, "data-id")
@@ -135,31 +138,21 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             answer_maps.insert(a_id, a_text);
             answers[idx] = a_id;
         }
-        answer_of_questions.push((q_id, answers));
-    }
-    let db2 = Arc::clone(&db);
-    let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
-    let mut unknowns = HashMap::new();
-    for (q_id, answers) in &answer_of_questions {
-        let cur_answer = match data.get(&q_id) {
-            Some(answer) => *answer,
-            None => {
-                let idx = rand::thread_rng().gen_range(0, 4);
-                let answer = answers[idx];
-                unknowns.insert(*q_id, answer);
-                answer
-            }
-        };
+        let cur_answer = data.get(&q_id).copied().unwrap_or_else(|| {
+            let idx = rand::thread_rng().gen_range(0, 4);
+            unknowns.insert(q_id, answers[idx]);
+            answers[idx]
+        });
         let radio = wd
-            .get_element(
+            .get_element_from_element(
+                &question,
                 Using::CssSelector,
-                format!(
-                    r#"input[value="{answer}"]"#,
-                    answer = cur_answer
-                ),
+                format!(r#"input[value="{answer}"]"#, answer = cur_answer),
             )
             .await?;
         wd.element_click(&radio).await?;
+
+        answer_of_questions.insert(q_id, answers);
     }
     if !args.no_submit {
         wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#).await?;
@@ -168,7 +161,6 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             wd.close().await?;
         }
     }
-    let answer_of_questions = answer_of_questions.into_iter().collect::<HashMap<_, _>>();
     let unknown_questions = unknowns
         .into_iter()
         .map(|(q_id, answer_used)| {
