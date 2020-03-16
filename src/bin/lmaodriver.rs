@@ -177,14 +177,14 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             }
             answers[idx] = a_id;
             if cur_answer == Some(a_id) {
-                wd.element_send_keys(&input, " ").await?;
+                wd.run_script_elem("arguments[0].click();", &input).await?;
                 answered = true;
             }
         }
         if !answered {
             let idx = rand::thread_rng().gen_range(0, 4);
             unknowns.insert(q_id, answers[idx]);
-            wd.element_send_keys(&input_elems[idx], " ").await?;
+            wd.run_script_elem("arguments[0].click();", &input_elems[idx]).await?;
         }
 
         answer_of_questions.insert(q_id, answers);
