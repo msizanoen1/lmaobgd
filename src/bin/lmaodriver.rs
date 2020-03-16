@@ -145,11 +145,9 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             }
         }
         if !answered {
-            let cur_answer = data.get(&q_id).copied().unwrap_or_else(|| {
-                let idx = rand::thread_rng().gen_range(0, 4);
-                unknowns.insert(q_id, answers[idx]);
-                answers[idx]
-            });
+            let idx = rand::thread_rng().gen_range(0, 4);
+            unknowns.insert(q_id, answers[idx]);
+            let cur_answer = answers[idx];
             let radio = wd
                 .get_element_from_element(
                     &question,
