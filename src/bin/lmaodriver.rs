@@ -142,7 +142,6 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let mut answer_of_questions = HashMap::new();
     let mut answer_maps = HashMap::new();
     let mut unknowns = HashMap::new();
-    delay_for(Duration::from_millis(500)).await;
     for question in questions {
         let q_id = wd
             .get_element_attr(&question, "data-id")
