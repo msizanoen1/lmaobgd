@@ -162,7 +162,10 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let cur_answer = data.get(&q_id).copied();
         for (idx, input) in inputs.into_iter().enumerate() {
             input_elems.push(input.clone());
-            let a_id = wd.get_element_attr(&input, "value").await?.parse::<i32>()?;
+            let a_id = wd
+                .get_element_prop::<String>(&input, "value")
+                .await?
+                .parse::<i32>()?;
             if !answer_avail.contains(&a_id) {
                 let a_text = wd
                     .run_script_elem(
