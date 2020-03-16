@@ -121,7 +121,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             .await?
             .parse::<i32>()?;
         let q_title = wd
-            .get_element_from_element(&question, Using::CssSelector, ".question-box-title")
+            .get_element_from_element(&question, Using::CssSelector, ".row")
             .await?;
         let q_text = wd.get_element_text(&q_title).await?;
         println!("Question {}: {}", q_id, process_question(&q_text));
