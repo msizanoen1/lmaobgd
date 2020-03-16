@@ -11,8 +11,10 @@ use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
 use structopt::StructOpt;
 use tokio::task::spawn_blocking;
+use tokio::time::delay_for;
 
 fn process_question(q: &str) -> String {
     let (mut vec, n) = q.lines().map(|s| s.trim()).filter(|s| *s != "").fold(
@@ -140,7 +142,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let mut answer_of_questions = HashMap::new();
     let mut answer_maps = HashMap::new();
     let mut unknowns = HashMap::new();
-    tokio::time::delay_for(std::time::Duration::from_millis(500)).await;
+    delay_for(Duration::from_millis(500)).await;
     for question in questions {
         let q_id = wd
             .get_element_attr(&question, "data-id")
@@ -193,7 +195,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     if !args.no_submit {
         wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#).await?;
         if !args.no_autoclose {
-            tokio::time::delay_for(std::time::Duration::from_secs(30)).await;
+            delay_for(Duration::from_secs(30)).await;
             wd.close().await?;
         }
     }
@@ -217,7 +219,6 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         answer_map: answer_maps,
         question_map: question_maps,
     };
-    let db2 = Arc::clone(&db);
-    spawn_blocking(move || actions::js_upload_call(&db2.lock().unwrap(), js_api_data)).await??;
+    spawn_blocking(move || actions::js_upload_call(&db.lock().unwrap(), js_api_data)).await??;
     Ok(())
 }
