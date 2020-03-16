@@ -9,6 +9,7 @@ use lmaobgd::actions;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
 use std::io::stdin;
+use std::io::Write;
 use structopt::StructOpt;
 
 fn process_question(q: &str) -> String {
@@ -36,8 +37,33 @@ fn process_question(q: &str) -> String {
     )
 }
 
+fn process_question2(q: &str) -> String {
+    let (mut vec, n) = q.lines().map(|s| s.trim()).filter(|s| *s != "").fold(
+        (Vec::new(), 0),
+        |(mut acc, i), e| {
+            if e.starts_with("A:")
+                || e.starts_with("B:")
+                || e.starts_with("C:")
+                || e.starts_with("D:")
+            {
+                (acc, i + 1)
+            } else {
+                acc.push(e);
+                (acc, i)
+            }
+        },
+    );
+    vec.truncate(vec.len() - n);
+    let iter = vec.into_iter().skip(1);
+    format!("{}", iter.collect::<Vec<_>>().join("\n"))
+}
+
 fn get_question_string(db: &PgConnection, id: i32) -> QueryResult<String> {
     Ok(process_question(&actions::get_question_string(db, id)?))
+}
+
+fn get_question_string2(db: &PgConnection, id: i32) -> QueryResult<String> {
+    Ok(process_question2(&actions::get_question_string(db, id)?))
 }
 
 fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
@@ -50,11 +76,22 @@ fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
     ))
 }
 
+fn get_answer_string2(db: &PgConnection, id: i32) -> QueryResult<String> {
+    let answer = actions::get_answer_string(db, id)?;
+    let iter = answer
+        .lines()
+        .map(|s| s.trim())
+        .filter(|s| *s != "")
+        .skip(1);
+    Ok(format!("{}", iter.collect::<Vec<_>>().join("\n")))
+}
+
 #[derive(StructOpt)]
 enum Command {
     Review,
     ViewData,
     DeleteQuestion { id: i32 },
+    Dump,
 }
 
 #[derive(StructOpt)]
@@ -74,6 +111,27 @@ fn main() -> Result<(), ExitFailure> {
         Command::Review => review(db)?,
         Command::ViewData => view(db)?,
         Command::DeleteQuestion { id } => del_question(db, id)?,
+        Command::Dump => dump(db)?,
+    }
+    Ok(())
+}
+
+fn dump(db: PgConnection) -> Result<(), failure::Error> {
+    let groups = group_rev(&db)?;
+    for group in groups {
+        let file_name = format!("{}.txt", group.text);
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&file_name)?;
+        let answers = answers::table
+            .filter(answers::group_.eq(group.id).and(answers::reviewed.eq(true)))
+            .load::<Answer>(&db)?;
+        for answer in answers {
+            let atext = get_answer_string2(&db, answer.answer_used)?;
+            let qtext = get_question_string2(&db, answer.question_id)?;
+            writeln!(file, "{}:::{}", qtext, atext)?;
+        }
     }
     Ok(())
 }
@@ -100,6 +158,20 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
                     .nullable()
                     .eq(answers::group_)
                     .and(answers::reviewed.eq(false)),
+            ),
+        ))
+        .get_results(db)
+        .context("unable to get groups")?)
+}
+
+fn group_rev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
+    Ok(groups::table
+        .filter(exists(
+            answers::table.filter(
+                groups::id
+                    .nullable()
+                    .eq(answers::group_)
+                    .and(answers::reviewed.eq(true)),
             ),
         ))
         .get_results(db)
