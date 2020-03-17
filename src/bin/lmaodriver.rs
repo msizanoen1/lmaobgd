@@ -99,10 +99,15 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     wd.navigate(&test_url).await?;
     let start = wd.get_element(Using::CssSelector, "#start-test").await?;
     wd.element_click(&start).await?;
-    delay_for(Duration::from_millis(500)).await;
-    let title_elem = wd
-        .get_element(Using::CssSelector, "body .row .col-12 h1")
-        .await?;
+    let title_elem = loop {
+        match wd
+            .get_element(Using::CssSelector, "body .row .col-12 h1")
+            .await?
+        {
+            Ok(elem) => break elem,
+            _ => (),
+        }
+    };
     let id_elem = wd
         .get_element(Using::CssSelector, "body .row .row .col-12 div")
         .await?;
