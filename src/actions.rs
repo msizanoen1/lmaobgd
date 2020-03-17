@@ -1,5 +1,6 @@
 use crate::models::*;
 use crate::schema::*;
+use diesel::pg::upsert::excluded;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::QueryResult;
@@ -30,7 +31,9 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .collect::<Vec<_>>();
     diesel::insert_into(answer_strings::table)
         .values(&answer_map)
-        .on_conflict_do_nothing()
+        .on_conflict(answer_strings::answer_id)
+        .do_update()
+        .set(answer_strings::answer_string.eq(excluded(answer_strings::answer_string)))
         .execute(conn)?;
     let question_map = data
         .question_map
@@ -42,7 +45,9 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .collect::<Vec<_>>();
     diesel::insert_into(question_strings::table)
         .values(&question_map)
-        .on_conflict_do_nothing()
+        .on_conflict(question_strings::question_id)
+        .do_update()
+        .set(question_strings::question_string.eq(excluded(question_strings::question_string)))
         .execute(conn)?;
     let group = data.group;
     let group_text = data.group_text;
@@ -69,7 +74,13 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .collect::<Vec<_>>();
     diesel::insert_into(answers::table)
         .values(&answers)
-        .on_conflict_do_nothing()
+        .on_conflict(answers::question_id)
+        .do_update()
+        .set((
+            answers::answer_used.eq(excluded(answers::answer_used)),
+            answers::reviewed.eq(false),
+            answers::group_.eq(Some(group)),
+        ))
         .execute(conn)?;
     Ok(())
 }
