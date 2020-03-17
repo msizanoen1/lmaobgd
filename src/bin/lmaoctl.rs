@@ -146,7 +146,7 @@ fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
         .filter(exists(
             answers::table.filter(groups::id.nullable().eq(answers::group_)),
         ))
-        .get_results(db)
+        .load(db)
         .context("unable to get groups")?)
 }
 
@@ -160,7 +160,7 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
                     .and(answers::reviewed.eq(false)),
             ),
         ))
-        .get_results(db)
+        .load(db)
         .context("unable to get groups")?)
 }
 
@@ -174,7 +174,7 @@ fn group_rev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
                     .and(answers::reviewed.eq(true)),
             ),
         ))
-        .get_results(db)
+        .load(db)
         .context("unable to get groups")?)
 }
 
@@ -190,7 +190,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     let id: i32 = input.trim().parse()?;
     let answers = answers::table
         .filter(answers::group_.eq(id))
-        .get_results::<Answer>(&db)
+        .load::<Answer>(&db)
         .context("unable to get answers")?;
     println!("Questions:");
     for answer in answers {
@@ -251,7 +251,7 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
     let unreviewed = answers::table
         .filter(answers::reviewed.eq(false))
         .filter(answers::group_.eq(id))
-        .get_results::<Answer>(&db)
+        .load::<Answer>(&db)
         .context("unable to get unreviewed data")?;
     for answer in unreviewed {
         let question_id = answer.question_id;
