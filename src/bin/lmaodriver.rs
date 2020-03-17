@@ -102,7 +102,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let title_elem = loop {
         match wd
             .get_element(Using::CssSelector, "body .row .col-12 h1")
-            .await?
+            .await
         {
             Ok(elem) => break elem,
             _ => (),
