@@ -50,7 +50,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(web::Json::<models::JsApiUpload>::configure(|cfg| {
+            .app_data(web::Json::<models::JsApiUpload>::configure(|cfg| {
                 cfg.limit(128 * 1024 * 1024)
             }))
             .service(api())

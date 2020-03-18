@@ -134,7 +134,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let inputs = wd
             .get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)
             .await?;
-        let mut answers = [0; 4];
+        let mut answers = [-1; 4];
         let mut input_elems = Vec::new();
         let mut answered = false;
         for (idx, input) in inputs.into_iter().enumerate() {
