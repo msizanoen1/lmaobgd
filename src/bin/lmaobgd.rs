@@ -1,6 +1,6 @@
 use actix_cors::Cors;
 use actix_web::http::header;
-use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer};
+use actix_web::{get, middleware, post, web, App, FromRequest, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use lmaobgd::{actions, models};
@@ -50,6 +50,9 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(web::Json::<models::JsApiUpload>::configure(|cfg| {
+                cfg.limit(128 * 1024 * 1024)
+            }))
             .service(api())
             .wrap(cors())
             .wrap(middleware::Logger::default())
