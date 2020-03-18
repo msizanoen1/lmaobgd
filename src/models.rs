@@ -6,13 +6,14 @@ use std::collections::HashMap;
 #[table_name = "answers"]
 pub struct Answer {
     pub question_id: i32,
-    pub answer1: i32,
-    pub answer2: i32,
-    pub answer3: i32,
-    pub answer4: i32,
+    pub answer1: Option<i32>,
+    pub answer2: Option<i32>,
+    pub answer3: Option<i32>,
+    pub answer4: Option<i32>,
     pub answer_used: i32,
     pub reviewed: bool,
     pub group_: Option<i32>,
+    pub valid_answers: Vec<i32>,
 }
 
 #[derive(Queryable)]
@@ -67,6 +68,6 @@ pub struct JsApiUpload {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UnknownQuestion {
-    pub answers: [i32; 4],
+    pub answers: Vec<i32>,
     pub answer_used: i32,
 }

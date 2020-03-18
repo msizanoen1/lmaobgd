@@ -210,26 +210,9 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     let question = answers::table.find(id).get_result::<Answer>(&db)?;
     println!("Question {}: {}", id, get_question_string(&db, id)?);
     println!("Possible answers:");
-    println!(
-        "{} ({})",
-        question.answer1,
-        get_answer_string(&db, question.answer1)?
-    );
-    println!(
-        "{} ({})",
-        question.answer2,
-        get_answer_string(&db, question.answer2)?
-    );
-    println!(
-        "{} ({})",
-        question.answer3,
-        get_answer_string(&db, question.answer3)?
-    );
-    println!(
-        "{} ({})",
-        question.answer4,
-        get_answer_string(&db, question.answer4)?
-    );
+    for answer in question.valid_answers {
+        println!("{} ({})", answer, get_answer_string(&db, answer)?);
+    }
     println!(
         "Answer used: {} ({})",
         question.answer_used,
@@ -258,26 +241,9 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
         let question = get_question_string(&db, question_id)?;
         println!("Question {} ({}):", question_id, question);
         println!("Possible answers:");
-        println!(
-            "{} ({})",
-            answer.answer1,
-            get_answer_string(&db, answer.answer1)?
-        );
-        println!(
-            "{} ({})",
-            answer.answer2,
-            get_answer_string(&db, answer.answer2)?
-        );
-        println!(
-            "{} ({})",
-            answer.answer3,
-            get_answer_string(&db, answer.answer3)?
-        );
-        println!(
-            "{} ({})",
-            answer.answer4,
-            get_answer_string(&db, answer.answer4)?
-        );
+        for answer in answer.valid_answers {
+            println!("{} ({})", answer, get_answer_string(&db, answer)?);
+        }
         println!(
             "Answer used: {} ({})",
             answer.answer_used,

@@ -8,13 +8,14 @@ table! {
 table! {
     answers (question_id) {
         question_id -> Int4,
-        answer1 -> Int4,
-        answer2 -> Int4,
-        answer3 -> Int4,
-        answer4 -> Int4,
+        answer1 -> Nullable<Int4>,
+        answer2 -> Nullable<Int4>,
+        answer3 -> Nullable<Int4>,
+        answer4 -> Nullable<Int4>,
         answer_used -> Int4,
         reviewed -> Bool,
         group_ -> Nullable<Int4>,
+        valid_answers -> Array<Int4>,
     }
 }
 

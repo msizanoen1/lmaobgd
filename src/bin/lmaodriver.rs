@@ -134,10 +134,10 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let inputs = wd
             .get_elements_from_element(&question, Using::CssSelector, r#"input[type="radio"]"#)
             .await?;
-        let mut answers = [-1; 4];
+        let mut answers = Vec::new();
         let mut input_elems = Vec::new();
         let mut answered = false;
-        for (idx, input) in inputs.into_iter().enumerate() {
+        for input in inputs {
             input_elems.push(input.clone());
             let a_id = wd
                 .get_element_prop::<String>(&input, "value")
@@ -152,14 +152,14 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
                     .await?;
                 answer_maps.insert(a_id, a_text);
             }
-            answers[idx] = a_id;
+            answers.push(a_id);
             if cur_answer == Some(a_id) {
                 wd.element_send_keys(&input, "\u{e00d}").await?;
                 answered = true;
             }
         }
         if !answered {
-            let idx = rand::thread_rng().gen_range(0, 4);
+            let idx = rand::thread_rng().gen_range(0, answers.len());
             unknowns.insert(q_id, answers[idx]);
             wd.element_send_keys(&input_elems[idx], "\u{e00d}").await?;
         }
@@ -176,11 +176,11 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let unknown_questions = unknowns
         .into_iter()
         .map(|(q_id, answer_used)| {
-            let answers = *answer_of_questions.get(&q_id).unwrap();
+            let answers = answer_of_questions.get(&q_id).unwrap().clone();
             (
                 q_id,
                 UnknownQuestion {
-                    answers,
+                    answers: answers.to_vec(),
                     answer_used,
                 },
             )
