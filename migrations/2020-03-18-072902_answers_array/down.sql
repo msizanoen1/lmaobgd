@@ -1,2 +1,6 @@
 ALTER TABLE answers
-    DROP COLUMN valid_answers;
+    DROP COLUMN valid_answers,
+    ALTER COLUMN answer1 SET NOT NULL,
+    ALTER COLUMN answer2 SET NOT NULL,
+    ALTER COLUMN answer3 SET NOT NULL,
+    ALTER COLUMN answer4 SET NOT NULL;
