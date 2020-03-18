@@ -144,7 +144,7 @@ fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
 fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
     Ok(groups::table
         .filter(exists(
-            answers::table.filter(groups::id.nullable().eq(answers::group_)),
+            answers::table.filter(groups::id.eq(answers::group_)),
         ))
         .load(db)
         .context("unable to get groups")?)
@@ -155,7 +155,6 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
         .filter(exists(
             answers::table.filter(
                 groups::id
-                    .nullable()
                     .eq(answers::group_)
                     .and(answers::reviewed.eq(false)),
             ),
@@ -169,7 +168,6 @@ fn group_rev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
         .filter(exists(
             answers::table.filter(
                 groups::id
-                    .nullable()
                     .eq(answers::group_)
                     .and(answers::reviewed.eq(true)),
             ),

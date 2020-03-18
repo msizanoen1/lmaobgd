@@ -70,7 +70,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
             answer_used: guess.answer_used,
             question_id: id,
             reviewed: false,
-            group_: Some(group),
+            group_: group,
         })
         .collect::<Vec<_>>();
     diesel::insert_into(answers::table)
@@ -80,7 +80,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .set((
             answers::answer_used.eq(excluded(answers::answer_used)),
             answers::reviewed.eq(false),
-            answers::group_.eq(Some(group)),
+            answers::group_.eq(group),
         ))
         .execute(conn)?;
     Ok(())

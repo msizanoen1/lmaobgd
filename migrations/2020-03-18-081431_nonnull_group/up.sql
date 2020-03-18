@@ -1,0 +1,2 @@
+ALTER TABLE answers
+    ALTER COLUMN group_ SET NOT NULL;

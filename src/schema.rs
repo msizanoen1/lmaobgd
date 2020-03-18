@@ -14,7 +14,7 @@ table! {
         answer4 -> Nullable<Int4>,
         answer_used -> Int4,
         reviewed -> Bool,
-        group_ -> Nullable<Int4>,
+        group_ -> Int4,
         valid_answers -> Array<Int4>,
     }
 }

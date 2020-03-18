@@ -12,7 +12,7 @@ pub struct Answer {
     pub answer4: Option<i32>,
     pub answer_used: i32,
     pub reviewed: bool,
-    pub group_: Option<i32>,
+    pub group_: i32,
     pub valid_answers: Vec<i32>,
 }
 
