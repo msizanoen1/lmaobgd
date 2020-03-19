@@ -38,7 +38,11 @@ impl WebDriver {
                 }),
             );
         }
-        let mut this = Self::new(&url, HashMap::new(), vec![caps]).await?;
+        let mut this = loop {
+            if let Ok(this) = Self::new(&url, HashMap::new(), vec![caps.clone()]).await {
+                break this;
+            }
+        };
         this.child = Some(child);
         Ok(this)
     }
