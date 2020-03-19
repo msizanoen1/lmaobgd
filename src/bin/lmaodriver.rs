@@ -208,12 +208,12 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             correct = Some(
                 num_list(&correct_t)
                     .into_iter()
-                    .map(|idx| question_ids[idx])
+                    .map(|idx| question_ids[idx - 1])
                     .collect(),
             );
             let wrong = num_list(&wrong);
             for wrong in wrong {
-                unknowns.remove(&question_ids[wrong]);
+                unknowns.remove(&question_ids[wrong - 1]);
                 println!("Incorrect question: {}", wrong);
             }
         }
