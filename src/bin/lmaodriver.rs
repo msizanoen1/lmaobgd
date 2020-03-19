@@ -201,7 +201,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         if args.autoreview {
             let correct_e = wd.get_element(Using::CssSelector, "#lblTrueAnswer").await?;
             let wrong = wd
-                .get_element(Using::CssSelector, "#lblFalseAnswer")
+                .get_element(Using::CssSelector, "#lblFalseAnser") // intentional typo
                 .await?;
             let correct_t = wd.get_element_text(&correct_e).await?;
             let wrong = wd.get_element_text(&wrong).await?;
