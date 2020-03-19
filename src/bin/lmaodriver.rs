@@ -82,6 +82,9 @@ struct Args {
     /// Auto review using results page.
     #[structopt(short, long)]
     autoreview: bool,
+    /// Repeat auto review until all correct answer.
+    #[structopt(short, long)]
+    crack: bool,
     /// WebDriver server URL
     webdriver_url: String,
     /// Account ID
@@ -94,13 +97,20 @@ struct Args {
 async fn main() -> Result<(), exitfailure::ExitFailure> {
     let _ = dotenv();
     let args = Args::from_args();
-    let url = args.database_url;
+    let url = args.database_url.clone();
     let db = Arc::new(Mutex::new(
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
-    let endpoint = args.webdriver_url;
-    let user = args.id;
-    let test_url = args.test_url;
+    while run(&args, Arc::clone(&db)).await? {
+        // repeat
+    }
+    Ok(())
+}
+
+async fn run(args: &Args, db: Arc<Mutex<PgConnection>>) -> Result<bool, failure::Error> {
+    let endpoint = &args.webdriver_url;
+    let user = &args.id;
+    let test_url = &args.test_url;
     let mut caps = HashMap::new();
     if args.headless {
         caps.insert(
@@ -117,11 +127,11 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         .await?;
     let username = wd.get_element(Using::CssSelector, "#UserName").await?;
     let password = wd.get_element(Using::CssSelector, "#Password").await?;
-    wd.element_send_keys(&username, &user).await?;
-    wd.element_send_keys(&password, &user).await?;
+    wd.element_send_keys(&username, user).await?;
+    wd.element_send_keys(&password, user).await?;
     let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
     wd.element_click(&button).await?;
-    wd.navigate(&test_url).await?;
+    wd.navigate(test_url).await?;
     let start = wd.get_element(Using::CssSelector, "#start-test").await?;
     wd.element_click(&start).await?;
     let title_elem = wd
@@ -194,6 +204,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         answer_of_questions.insert(q_id, answers);
     }
     let mut correct: Option<Vec<i32>> = None;
+    let mut has_incorrect = false;
     if !args.no_submit {
         wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#).await?;
         println!("Waiting for result page...");
@@ -215,6 +226,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             for wrong in wrong {
                 unknowns.remove(&question_ids[wrong - 1]);
                 println!("Incorrect question: {}", wrong);
+                has_incorrect = true;
             }
         }
         if !args.no_autoclose {
@@ -251,5 +263,5 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         })
         .await??;
     }
-    Ok(())
+    Ok(has_incorrect && args.crack)
 }
