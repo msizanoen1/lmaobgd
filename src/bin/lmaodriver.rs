@@ -113,6 +113,8 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         );
     }
     let wd = WebDriver::new(endpoint, HashMap::new(), vec![caps]).await?;
+    wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
+        .await?;
     let username = wd.get_element(Using::CssSelector, "#UserName").await?;
     let password = wd.get_element(Using::CssSelector, "#Password").await?;
     wd.element_send_keys(&username, user).await?;
@@ -138,8 +140,6 @@ async fn run(
     let test_url = &args.test_url;
     let db2 = Arc::clone(&db);
     let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
-    wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
-        .await?;
     wd.navigate(test_url).await?;
     let start = wd.get_element(Using::CssSelector, "#start-test").await?;
     wd.element_click(&start).await?;
