@@ -101,16 +101,8 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let db = Arc::new(Mutex::new(
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
-    while run(&args, Arc::clone(&db)).await? {
-        // repeat
-    }
-    Ok(())
-}
-
-async fn run(args: &Args, db: Arc<Mutex<PgConnection>>) -> Result<bool, failure::Error> {
     let endpoint = &args.webdriver_url;
     let user = &args.id;
-    let test_url = &args.test_url;
     let mut caps = HashMap::new();
     if args.headless {
         caps.insert(
@@ -120,17 +112,34 @@ async fn run(args: &Args, db: Arc<Mutex<PgConnection>>) -> Result<bool, failure:
             }),
         );
     }
-    let db2 = Arc::clone(&db);
-    let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
     let wd = WebDriver::new(endpoint, HashMap::new(), vec![caps]).await?;
-    wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
-        .await?;
     let username = wd.get_element(Using::CssSelector, "#UserName").await?;
     let password = wd.get_element(Using::CssSelector, "#Password").await?;
     wd.element_send_keys(&username, user).await?;
     wd.element_send_keys(&password, user).await?;
     let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
     wd.element_click(&button).await?;
+
+    while run(&wd, &args, Arc::clone(&db)).await? {
+        // repeat
+    }
+    if !args.no_autoclose {
+        wd.close().await?;
+    }
+
+    Ok(())
+}
+
+async fn run(
+    wd: &WebDriver,
+    args: &Args,
+    db: Arc<Mutex<PgConnection>>,
+) -> Result<bool, failure::Error> {
+    let test_url = &args.test_url;
+    let db2 = Arc::clone(&db);
+    let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
+    wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
+        .await?;
     wd.navigate(test_url).await?;
     let start = wd.get_element(Using::CssSelector, "#start-test").await?;
     wd.element_click(&start).await?;
@@ -228,9 +237,6 @@ async fn run(args: &Args, db: Arc<Mutex<PgConnection>>) -> Result<bool, failure:
                 println!("Incorrect question: {}", wrong);
                 has_incorrect = true;
             }
-        }
-        if !args.no_autoclose {
-            wd.close().await?;
         }
     }
     let unknown_questions = unknowns
