@@ -17,7 +17,7 @@ use structopt::StructOpt;
 use tokio::task::spawn_blocking;
 use tokio::time::delay_for;
 
-fn num_list(data: &str) -> Result<Vec<usize>, std::num::ParseIntError> {
+fn num_list(data: &str) -> Vec<usize> {
     let (list, st) = data
         .chars()
         .fold((Vec::new(), String::new()), |(mut list, mut st), chr| {
@@ -32,7 +32,7 @@ fn num_list(data: &str) -> Result<Vec<usize>, std::num::ParseIntError> {
         });
     list.into_iter()
         .chain(once(st))
-        .map(|x| x.parse())
+        .filter_map(|x| x.parse().ok())
         .collect()
 }
 
@@ -206,12 +206,12 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             let correct_t = wd.get_element_text(&correct_e).await?;
             let wrong = wd.get_element_text(&wrong).await?;
             correct = Some(
-                num_list(&correct_t)?
+                num_list(&correct_t)
                     .into_iter()
                     .map(|idx| question_ids[idx])
                     .collect(),
             );
-            let wrong = num_list(&wrong)?;
+            let wrong = num_list(&wrong);
             for wrong in wrong {
                 unknowns.remove(&question_ids[wrong]);
                 println!("Incorrect question: {}", wrong);
