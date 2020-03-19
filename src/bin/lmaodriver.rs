@@ -3,16 +3,38 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use lmaobgd::actions;
 use lmaobgd::models::*;
+use lmaobgd::schema::*;
 use lmaobgd::webdriver::*;
 use rand::prelude::*;
 use serde_json::json;
 use std::collections::HashMap;
+use std::iter::once;
+use std::mem::take;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use structopt::StructOpt;
 use tokio::task::spawn_blocking;
 use tokio::time::delay_for;
+
+fn num_list(data: &str) -> Result<Vec<usize>, std::num::ParseIntError> {
+    let (list, st) = data
+        .chars()
+        .fold((Vec::new(), String::new()), |(mut list, mut st), chr| {
+            if chr.is_digit(10) {
+                st.push(chr);
+            } else {
+                if !st.is_empty() {
+                    list.push(take(&mut st));
+                }
+            }
+            (list, st)
+        });
+    list.into_iter()
+        .chain(once(st))
+        .map(|x| x.parse())
+        .collect()
+}
 
 fn process_question(q: &str) -> String {
     let (mut vec, n) = q.lines().map(|s| s.trim()).filter(|s| *s != "").fold(
@@ -57,6 +79,9 @@ struct Args {
     /// Fetch question text even when in database
     #[structopt(short, long)]
     force_fetch: bool,
+    /// Auto review using results page.
+    #[structopt(short, long)]
+    autoreview: bool,
     /// WebDriver server URL
     webdriver_url: String,
     /// Account ID
@@ -120,11 +145,13 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let mut answer_of_questions = HashMap::new();
     let mut answer_maps = HashMap::new();
     let mut unknowns = HashMap::new();
+    let mut question_ids = Vec::new();
     for question in questions {
         let q_id = wd
             .get_element_attr(&question, "data-id")
             .await?
             .parse::<i32>()?;
+        question_ids.push(q_id);
         let cur_answer = data.get(&q_id).copied();
         if args.force_fetch || cur_answer.is_none() {
             let q_text = wd.get_element_text(&question).await?;
@@ -166,10 +193,31 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
 
         answer_of_questions.insert(q_id, answers);
     }
+    let mut correct: Option<Vec<i32>> = None;
     if !args.no_submit {
         wd.run_script_unit(r#"SendUserTestResultToServer("Đang nộp bài, vui lòng đợi và không thực hiện thêm bất cứ thao tác nào!", 2);"#).await?;
+        println!("Waiting for result page...");
+        delay_for(Duration::from_secs(15)).await;
+        if args.autoreview {
+            let correct_e = wd.get_element(Using::CssSelector, "#lblTrueAnswer").await?;
+            let wrong = wd
+                .get_element(Using::CssSelector, "#lblFalseAnswer")
+                .await?;
+            let correct_t = wd.get_element_text(&correct_e).await?;
+            let wrong = wd.get_element_text(&wrong).await?;
+            correct = Some(
+                num_list(&correct_t)?
+                    .into_iter()
+                    .map(|idx| question_ids[idx])
+                    .collect(),
+            );
+            let wrong = num_list(&wrong)?;
+            for wrong in wrong {
+                unknowns.remove(&question_ids[wrong]);
+                println!("Incorrect question: {}", wrong);
+            }
+        }
         if !args.no_autoclose {
-            delay_for(Duration::from_secs(15)).await;
             wd.close().await?;
         }
     }
@@ -193,6 +241,15 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         answer_map: answer_maps,
         question_map: question_maps,
     };
-    spawn_blocking(move || actions::js_upload_call(&db.lock().unwrap(), js_api_data)).await??;
+    let db2 = Arc::clone(&db);
+    spawn_blocking(move || actions::js_upload_call(&db2.lock().unwrap(), js_api_data)).await??;
+    if let Some(correct) = correct {
+        spawn_blocking(move || {
+            diesel::update(answers::table.filter(answers::question_id.eq_any(&correct)))
+                .set(answers::reviewed.eq(true))
+                .execute(&db.lock().unwrap() as &PgConnection)
+        })
+        .await??;
+    }
     Ok(())
 }
