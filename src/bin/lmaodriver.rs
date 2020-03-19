@@ -6,7 +6,6 @@ use lmaobgd::models::*;
 use lmaobgd::schema::*;
 use lmaobgd::webdriver::*;
 use rand::prelude::*;
-use serde_json::json;
 use std::collections::HashMap;
 use std::iter::once;
 use std::mem::take;
@@ -85,8 +84,9 @@ struct Args {
     /// Repeat auto review until all correct answer.
     #[structopt(short, long)]
     crack: bool,
-    /// WebDriver server URL
-    webdriver_url: String,
+    /// Geckodriver command to use
+    #[structopt(short, long)]
+    geckodriver: Option<String>,
     /// Account ID
     id: String,
     /// URL to navigate
@@ -101,24 +101,13 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let db = Arc::new(Mutex::new(
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
-    let endpoint = &args.webdriver_url;
-    let user = &args.id;
-    let mut caps = HashMap::new();
-    if args.headless {
-        caps.insert(
-            String::from("moz:firefoxOptions"),
-            json!({
-                "args": ["-headless"],
-            }),
-        );
-    }
-    let wd = WebDriver::new(endpoint, HashMap::new(), vec![caps]).await?;
+    let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless).await?;
     wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
         .await?;
     let username = wd.get_element(Using::CssSelector, "#UserName").await?;
     let password = wd.get_element(Using::CssSelector, "#Password").await?;
-    wd.element_send_keys(&username, user).await?;
-    wd.element_send_keys(&password, user).await?;
+    wd.element_send_keys(&username, &args.id).await?;
+    wd.element_send_keys(&password, &args.id).await?;
     let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
     wd.element_click(&button).await?;
 

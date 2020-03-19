@@ -3,15 +3,46 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use tokio::net::TcpListener;
+use tokio::process::{Child, Command};
 
-#[derive(Clone)]
 pub struct WebDriver {
     url: String,
     client: Client,
     session: WebDriverSession,
+    child: Option<Child>,
 }
 
 impl WebDriver {
+    pub async fn new_firefox<T>(command: Option<T>, headless: bool) -> Result<Self, Error>
+    where
+        T: Into<String>,
+    {
+        let command = command
+            .map(|x| x.into())
+            .unwrap_or_else(|| String::from("geckodriver"));
+        let sa = std::net::SocketAddr::from(([0, 0, 0, 0], 0));
+        let port = TcpListener::bind(sa).await?.local_addr()?.port();
+        let url = format!("http://127.0.0.1:{}", port);
+        let child = Command::new(command)
+            .arg("-p")
+            .arg(&port.to_string())
+            .kill_on_drop(true)
+            .spawn()?;
+        let mut caps = HashMap::new();
+        if headless {
+            caps.insert(
+                String::from("moz:firefoxOptions"),
+                json!({
+                    "args": ["-headless"],
+                }),
+            );
+        }
+        let mut this = Self::new(&url, HashMap::new(), vec![caps]).await?;
+        this.child = Some(child);
+        Ok(this)
+    }
+
     pub async fn new<T: Into<String> + std::fmt::Display>(
         url: T,
         always_match: HashMap<String, serde_json::Value>,
@@ -37,6 +68,7 @@ impl WebDriver {
             url: url.into(),
             session: session.value,
             client,
+            child: None,
         })
     }
 
