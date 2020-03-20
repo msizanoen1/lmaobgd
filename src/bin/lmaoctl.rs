@@ -8,8 +8,8 @@ use failure::ResultExt;
 use lmaobgd::actions;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
-use std::io::stdin;
-use std::io::Write;
+use std::collections::HashSet;
+use std::io::{stdin, Write};
 use structopt::StructOpt;
 
 fn process_question(q: &str) -> String {
@@ -92,6 +92,7 @@ enum Command {
     ViewData,
     DeleteQuestion { id: i32 },
     Dump,
+    Collapse,
 }
 
 #[derive(StructOpt)]
@@ -112,6 +113,30 @@ fn main() -> Result<(), ExitFailure> {
         Command::ViewData => view(db)?,
         Command::DeleteQuestion { id } => del_question(db, id)?,
         Command::Dump => dump(db)?,
+        Command::Collapse => collapse(db)?,
+    }
+    Ok(())
+}
+
+fn collapse(db: PgConnection) -> Result<(), failure::Error> {
+    let group_texts = groups::table
+        .select(groups::text)
+        .load::<String>(&db)?
+        .into_iter()
+        .collect::<HashSet<_>>();
+    for text in group_texts {
+        let group_ids = groups::table
+            .filter(groups::text.eq(&text))
+            .select(groups::id)
+            .load::<i32>(&db)?;
+        if group_ids.len() > 1 {
+            // There is many group of same name
+            let base_id = group_ids[0];
+            let other_ids = &group_ids[1..];
+            diesel::update(answers::table.filter(answers::group_.eq_any(other_ids)))
+                .set(answers::group_.eq(base_id))
+                .execute(&db)?;
+        }
     }
     Ok(())
 }
