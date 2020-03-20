@@ -62,10 +62,6 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
         .unknown_questions
         .into_iter()
         .map(|(id, guess)| Answer {
-            answer1: None,
-            answer2: None,
-            answer3: None,
-            answer4: None,
             valid_answers: guess.answers.clone(),
             answer_used: guess.answer_used,
             question_id: id,

@@ -102,17 +102,25 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
     let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless).await?;
-    wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
-        .await?;
-    let username = wd.get_element(Using::CssSelector, "#UserName").await?;
-    let password = wd.get_element(Using::CssSelector, "#Password").await?;
-    wd.element_send_keys(&username, &args.id).await?;
-    wd.element_send_keys(&password, &args.id).await?;
-    let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
-    wd.element_click(&button).await?;
 
-    while run(&wd, &args, Arc::clone(&db)).await? {
-        // repeat
+    let ret = (async {
+        wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
+            .await?;
+        let username = wd.get_element(Using::CssSelector, "#UserName").await?;
+        let password = wd.get_element(Using::CssSelector, "#Password").await?;
+        wd.element_send_keys(&username, &args.id).await?;
+        wd.element_send_keys(&password, &args.id).await?;
+        let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
+        wd.element_click(&button).await?;
+
+        while run(&wd, &args, Arc::clone(&db)).await? {
+            // repeat
+        }
+        Ok::<_, failure::Error>(())
+    })
+    .await;
+    if let Err(e) = ret {
+        println!("Error: {}", e);
     }
     if !args.no_autoclose {
         wd.close().await?;

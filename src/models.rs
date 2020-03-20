@@ -6,10 +6,6 @@ use std::collections::HashMap;
 #[table_name = "answers"]
 pub struct Answer {
     pub question_id: i32,
-    pub answer1: Option<i32>,
-    pub answer2: Option<i32>,
-    pub answer3: Option<i32>,
-    pub answer4: Option<i32>,
     pub answer_used: i32,
     pub reviewed: bool,
     pub group_: i32,

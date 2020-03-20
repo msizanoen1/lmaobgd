@@ -8,10 +8,6 @@ table! {
 table! {
     answers (question_id) {
         question_id -> Int4,
-        answer1 -> Nullable<Int4>,
-        answer2 -> Nullable<Int4>,
-        answer3 -> Nullable<Int4>,
-        answer4 -> Nullable<Int4>,
         answer_used -> Int4,
         reviewed -> Bool,
         group_ -> Int4,
@@ -33,6 +29,7 @@ table! {
     }
 }
 
+joinable!(answers -> answer_strings (answer_used));
 joinable!(answers -> groups (group_));
 joinable!(answers -> question_strings (question_id));
 
