@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use structopt::StructOpt;
+use tokio::signal::ctrl_c;
 use tokio::task::spawn_blocking;
 use tokio::time::delay_for;
 
@@ -103,7 +104,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     ));
     let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless).await?;
 
-    let ret = (async {
+    let main = async {
         wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
             .await?;
         let username = wd.get_element(Using::CssSelector, "#UserName").await?;
@@ -117,11 +118,18 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
             // repeat
         }
         Ok::<_, failure::Error>(())
-    })
-    .await;
-    if let Err(e) = ret {
-        println!("Error: {}", e);
-    }
+    };
+    tokio::select! {
+        _ = ctrl_c() => {
+            println!("Shutting down on CTRL-C");
+        }
+        ret = main => {
+            if let Err(e) = ret {
+                println!("Error: {}", e);
+            }
+        }
+    };
+
     if !args.no_autoclose {
         wd.close().await?;
     }
