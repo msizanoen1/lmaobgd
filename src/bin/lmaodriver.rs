@@ -47,7 +47,7 @@ where
         .arg("-v")
         .arg("-p")
         .arg(&port.to_string())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
         .spawn()?;
     let mut child_stderr = BufReader::new(child.stderr.take().unwrap());
     let mut lines = (&mut child_stderr).lines();
