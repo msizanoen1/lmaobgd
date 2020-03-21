@@ -14,9 +14,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use structopt::StructOpt;
-use thirtyfour::common::capabilities::desiredcapabilities::Capabilities;
 use thirtyfour::common::scriptargs::ScriptArgs;
-use thirtyfour::{By, DesiredCapabilities, Keys, WebDriver, WebDriverCommands};
+use thirtyfour::{By, Capabilities, DesiredCapabilities, Keys, WebDriver, WebDriverCommands};
 use tokio::io::{copy, stderr, BufReader};
 use tokio::net::TcpListener;
 use tokio::prelude::*;
@@ -64,7 +63,7 @@ where
                             });
                         }
                         let mut caps = DesiredCapabilities::firefox();
-                        caps.get_mut().as_object_mut().unwrap().remove("browserVersion");
+                        caps.set_version("55").map_err(wd_error)?;
                         if headless {
                             caps.add_firefox_option("args", ["-headless"]).map_err(wd_error)?;
                         }
