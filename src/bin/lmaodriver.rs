@@ -16,7 +16,7 @@ use std::time::Duration;
 use structopt::StructOpt;
 use thirtyfour::common::scriptargs::ScriptArgs;
 use thirtyfour::{By, DesiredCapabilities, Keys, WebDriver, WebDriverCommands};
-use tokio::io::BufReader;
+use tokio::io::{copy, stderr, BufReader};
 use tokio::net::TcpListener;
 use tokio::prelude::*;
 use tokio::process::{Child, Command};
@@ -29,7 +29,11 @@ fn wd_error(e: thirtyfour::error::WebDriverError) -> Error {
     failure::format_err!("WebDriver error: {:?}", e)
 }
 
-async fn new_firefox<T>(command: Option<T>, headless: bool) -> Result<(WebDriver, Child), Error>
+async fn new_firefox<T>(
+    command: Option<T>,
+    headless: bool,
+    verbose: bool,
+) -> Result<(WebDriver, Child), Error>
 where
     T: Into<String>,
 {
@@ -40,18 +44,24 @@ where
     let port = TcpListener::bind(sa).await?.local_addr()?.port();
     let url = format!("http://127.0.0.1:{}", port);
     let mut child = Command::new(command)
+        .arg("-v")
         .arg("-p")
         .arg(&port.to_string())
         .stderr(Stdio::piped())
         .spawn()?;
-    let child_stderr = BufReader::new(child.stderr.take().unwrap());
-    let mut lines = child_stderr.lines();
+    let mut child_stderr = BufReader::new(child.stderr.take().unwrap());
+    let mut lines = (&mut child_stderr).lines();
     loop {
         tokio::select! {
             line = lines.next() => {
                 if let Some(line) = line {
                     let line = line?;
-                    if line.contains("listen") && line.contains(&port.to_string()) {
+                    if line.contains("Listening") && line.contains(&port.to_string()) {
+                        if verbose {
+                            tokio::spawn(async move {
+                                let _ = copy(&mut child_stderr, &mut stderr()).await;
+                            });
+                        }
                         let mut caps = DesiredCapabilities::firefox();
                         if headless {
                             caps.add_firefox_option("args", ["-headless"]).map_err(wd_error)?;
@@ -139,6 +149,9 @@ struct Args {
     /// Geckodriver command to use
     #[structopt(short, long)]
     geckodriver: Option<String>,
+    /// Verbose mode
+    #[structopt(short, long)]
+    verbose: bool,
     /// Account ID
     id: String,
     /// URL to navigate
@@ -153,7 +166,8 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let db = Arc::new(Mutex::new(
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
-    let (wd, mut child) = new_firefox(args.geckodriver.as_ref(), args.headless).await?;
+    let (wd, mut child) =
+        new_firefox(args.geckodriver.as_ref(), args.headless, args.verbose).await?;
 
     let main = async {
         wd.get("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")

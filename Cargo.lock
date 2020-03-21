@@ -1022,7 +1022,6 @@ dependencies = [
  "failure",
  "r2d2",
  "rand",
- "reqwest",
  "serde",
  "serde_json",
  "structopt",
