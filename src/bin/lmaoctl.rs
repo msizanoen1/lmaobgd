@@ -133,8 +133,8 @@ fn collapse(db: PgConnection) -> Result<(), failure::Error> {
             // There is many group of same name
             let base_id = group_ids[0];
             let other_ids = &group_ids[1..];
-            diesel::update(answers::table.filter(answers::group_.eq_any(other_ids)))
-                .set(answers::group_.eq(base_id))
+            diesel::update(answers::table.filter(answers::test_id.eq_any(other_ids)))
+                .set(answers::test_id.eq(base_id))
                 .execute(&db)?;
         }
     }
@@ -150,7 +150,11 @@ fn dump(db: PgConnection) -> Result<(), failure::Error> {
             .create(true)
             .open(&file_name)?;
         let answers = answers::table
-            .filter(answers::group_.eq(group.id).and(answers::reviewed.eq(true)))
+            .filter(
+                answers::test_id
+                    .eq(group.id)
+                    .and(answers::reviewed.eq(true)),
+            )
             .load::<Answer>(&db)?;
         for answer in answers {
             let atext = get_answer_string2(&db, answer.answer_used)?;
@@ -169,7 +173,7 @@ fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
 fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
     Ok(groups::table
         .filter(exists(
-            answers::table.filter(groups::id.eq(answers::group_)),
+            answers::table.filter(groups::id.eq(answers::test_id)),
         ))
         .load(db)
         .context("unable to get groups")?)
@@ -180,7 +184,7 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
         .filter(exists(
             answers::table.filter(
                 groups::id
-                    .eq(answers::group_)
+                    .eq(answers::test_id)
                     .and(answers::reviewed.eq(false)),
             ),
         ))
@@ -193,7 +197,7 @@ fn group_rev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
         .filter(exists(
             answers::table.filter(
                 groups::id
-                    .eq(answers::group_)
+                    .eq(answers::test_id)
                     .and(answers::reviewed.eq(true)),
             ),
         ))
@@ -212,7 +216,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     stdin().read_line(&mut input)?;
     let id: i32 = input.trim().parse()?;
     let answers = answers::table
-        .filter(answers::group_.eq(id))
+        .filter(answers::test_id.eq(id))
         .load::<Answer>(&db)
         .context("unable to get answers")?;
     println!("Questions:");
@@ -256,7 +260,7 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
     let id = input.trim().parse::<i32>()?;
     let unreviewed = answers::table
         .filter(answers::reviewed.eq(false))
-        .filter(answers::group_.eq(id))
+        .filter(answers::test_id.eq(id))
         .load::<Answer>(&db)
         .context("unable to get unreviewed data")?;
     for answer in unreviewed {
