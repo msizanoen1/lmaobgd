@@ -226,7 +226,7 @@ async fn run(
     let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
     wd.get(test_url).await.map_err(wd_error)?;
     let start = wd
-        .find_element(By::Id("#start-test"))
+        .find_element(By::Id("start-test"))
         .await
         .map_err(wd_error)?;
     start.click().await.map_err(wd_error)?;
