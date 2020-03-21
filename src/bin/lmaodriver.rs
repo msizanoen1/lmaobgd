@@ -63,7 +63,11 @@ where
                             });
                         }
                         let mut caps = DesiredCapabilities::firefox();
-                        caps.set_version("*").map_err(wd_error)?;
+                        let inner = caps.get_mut().as_object_mut().unwrap();
+                        let always_match = inner.get_mut("capabilities").unwrap().get_mut("alwaysMatch").unwrap().as_object_mut().unwrap();
+                        always_match.remove("browserVersion");
+                        always_match.remove("platformName");
+                        inner.remove("desiredCapabilities");
                         if headless {
                             caps.add_firefox_option("args", ["-headless"]).map_err(wd_error)?;
                         }
