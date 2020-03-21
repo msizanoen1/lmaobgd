@@ -3,8 +3,12 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use std::process::Stdio;
+use tokio::io::BufReader;
 use tokio::net::TcpListener;
+use tokio::prelude::*;
 use tokio::process::{Child, Command};
+use tokio::stream::StreamExt;
 
 pub struct WebDriver {
     url: String,
@@ -14,7 +18,11 @@ pub struct WebDriver {
 }
 
 impl WebDriver {
-    pub async fn new_firefox<T>(command: Option<T>, headless: bool) -> Result<Self, Error>
+    pub async fn new_firefox<T>(
+        command: Option<T>,
+        headless: bool,
+        verbose: bool,
+    ) -> Result<Self, Error>
     where
         T: Into<String>,
     {
@@ -24,9 +32,11 @@ impl WebDriver {
         let sa = std::net::SocketAddr::from(([0, 0, 0, 0], 0));
         let port = TcpListener::bind(sa).await?.local_addr()?.port();
         let url = format!("http://127.0.0.1:{}", port);
-        let child = Command::new(command)
+        let mut child = Command::new(command)
+            .arg("-v")
             .arg("-p")
             .arg(&port.to_string())
+            .stdout(Stdio::piped())
             .kill_on_drop(true)
             .spawn()?;
         let mut caps = HashMap::new();
@@ -38,13 +48,30 @@ impl WebDriver {
                 }),
             );
         }
-        let mut this = loop {
-            if let Ok(this) = Self::new(&url, HashMap::new(), vec![caps.clone()]).await {
-                break this;
+        let mut stdout = BufReader::new(child.stdout.take().unwrap());
+        let mut lines = (&mut stdout).lines();
+        loop {
+            tokio::select! {
+                line = lines.next() => {
+                    if let Some(line) = line {
+                        let line = line?;
+                        if line.contains("Listening") && line.contains(&port.to_string()) {
+                            if verbose {
+                                tokio::spawn(async move {
+                                    let _ = tokio::io::copy(&mut stdout, &mut tokio::io::stderr()).await;
+                                });
+                            }
+                            let mut wd = WebDriver::new(&url, HashMap::new(), vec![caps]).await?;
+                            wd.child = Some(child);
+                            return Ok(wd);
+                        }
+                    }
+                }
+                _ = &mut child => {
+                    failure::bail!("geckodriver errored");
+                }
             }
-        };
-        this.child = Some(child);
-        Ok(this)
+        }
     }
 
     pub async fn new<T: Into<String> + std::fmt::Display>(

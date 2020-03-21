@@ -85,6 +85,9 @@ struct Args {
     /// Repeat auto review until all correct answer.
     #[structopt(short, long)]
     crack: bool,
+    /// Verbose mode
+    #[structopt(short, long)]
+    verbose: bool,
     /// Geckodriver command to use
     #[structopt(short, long)]
     geckodriver: Option<String>,
@@ -102,7 +105,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let db = Arc::new(Mutex::new(
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
-    let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless).await?;
+    let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless, args.verbose).await?;
 
     let main = async {
         wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
