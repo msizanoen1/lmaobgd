@@ -37,6 +37,7 @@ impl WebDriver {
             .arg("-p")
             .arg(&port.to_string())
             .stdout(Stdio::piped())
+            .stderr(Stdio::null())
             .kill_on_drop(true)
             .spawn()?;
         let mut caps = HashMap::new();
@@ -62,8 +63,10 @@ impl WebDriver {
                                 });
                             } else {
                                 tokio::spawn(async move {
-                                    let _hld = stdout;
-                                    futures::future::pending::<()>().await;
+                                    let mut buf = vec![0u8; 512];
+                                    loop {
+                                        let _ = stdout.read(&mut buf[..]).await;
+                                    }
                                 });
                             }
                             let mut wd = WebDriver::new(&url, HashMap::new(), vec![caps]).await?;
