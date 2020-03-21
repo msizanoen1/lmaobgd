@@ -63,7 +63,7 @@ where
                             });
                         }
                         let mut caps = DesiredCapabilities::firefox();
-                        caps.set_version("55").map_err(wd_error)?;
+                        caps.set_version("*").map_err(wd_error)?;
                         if headless {
                             caps.add_firefox_option("args", ["-headless"]).map_err(wd_error)?;
                         }
