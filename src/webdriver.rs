@@ -60,6 +60,11 @@ impl WebDriver {
                                 tokio::spawn(async move {
                                     let _ = tokio::io::copy(&mut stdout, &mut tokio::io::stderr()).await;
                                 });
+                            } else {
+                                tokio::spawn(async move {
+                                    let _hld = stdout;
+                                    futures::future::pending::<()>().await;
+                                });
                             }
                             let mut wd = WebDriver::new(&url, HashMap::new(), vec![caps]).await?;
                             wd.child = Some(child);

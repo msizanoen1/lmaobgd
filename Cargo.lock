@@ -1019,6 +1019,7 @@ dependencies = [
  "env_logger",
  "exitfailure",
  "failure",
+ "futures",
  "r2d2",
  "rand",
  "reqwest",
