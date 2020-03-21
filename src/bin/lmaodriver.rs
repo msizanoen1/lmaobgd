@@ -49,7 +49,7 @@ where
         .arg(&port.to_string())
         .stdout(Stdio::piped())
         .spawn()?;
-    let mut child_stderr = BufReader::new(child.stderr.take().unwrap());
+    let mut child_stderr = BufReader::new(child.stdout.take().unwrap());
     let mut lines = (&mut child_stderr).lines();
     loop {
         tokio::select! {
