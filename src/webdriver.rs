@@ -414,54 +414,54 @@ pub enum Using {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct NavigateRequest {
-    pub url: String,
+struct NavigateRequest {
+    url: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct SendKeyRequest {
-    pub text: String,
+struct SendKeyRequest {
+    text: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ElementRequest {
-    pub using: Using,
-    pub value: String,
+struct ElementRequest {
+    using: Using,
+    value: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ScriptInvokeElem {
-    pub script: String,
-    pub args: [WebElement; 1],
+struct ScriptInvokeElem {
+    script: String,
+    args: [WebElement; 1],
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WebElement {
     #[serde(rename = "element-6066-11e4-a52e-4f735466cecf")]
-    pub element_id: String,
+    element_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct WebDriverSession {
-    pub session_id: String,
-    pub capabilities: HashMap<String, serde_json::Value>,
+struct WebDriverSession {
+    session_id: String,
+    capabilities: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct WdResponse<T> {
+struct WdResponse<T> {
     value: T,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Capabilities {
-    pub always_match: HashMap<String, serde_json::Value>,
-    pub first_match: Vec<HashMap<String, serde_json::Value>>,
+struct Capabilities {
+    always_match: HashMap<String, serde_json::Value>,
+    first_match: Vec<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NewSessionRequest {
-    pub capabilities: Capabilities,
+struct NewSessionRequest {
+    capabilities: Capabilities,
 }
