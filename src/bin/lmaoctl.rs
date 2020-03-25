@@ -224,7 +224,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
         question_cache_text.insert(question_id, text);
         answer_cache.insert(used.answer_id, process_answer(&used.answer_string));
         for (idx, id) in answer.valid_answers.iter().copied().enumerate() {
-            answer_cache.insert(id, valid_text[idx].clone());
+            answer_cache.insert(id, process_answer(&valid_text[idx]));
         }
     }
     println!("Enter question ID:");
@@ -275,9 +275,13 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
         let question_text = process_question(&question.question_string);
         println!("Question {} ({}):", question.question_id, question_text);
         println!("Possible answers:");
-        for idx in 0..answer.valid_answers.len() {
-            println!("{} ({})", answer.valid_answers[idx], all[idx]);
-            answer_text_cache.insert(answer.valid_answers[idx], all[idx].clone());
+        for (idx, id) in answer.valid_answers.iter().copied().enumerate() {
+            answer_text_cache.insert(answer.valid_answers[idx], process_answer(&all[idx]));
+            println!(
+                "{} ({})",
+                answer.valid_answers[idx],
+                answer_text_cache.get(&id).unwrap()
+            );
         }
         println!("Answer used: {} ({})", used.answer_id, used.answer_string);
         loop {
