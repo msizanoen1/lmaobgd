@@ -130,6 +130,11 @@ fn collapse(db: PgConnection) -> Result<(), failure::Error> {
 
 fn dump(db: PgConnection) -> Result<(), failure::Error> {
     let group_texts = groups::table
+        .filter(exists(
+            answers::table
+                .filter(answers::test_id.eq(groups::id))
+                .filter(answers::reviewed.eq(true)),
+        ))
         .select(groups::text)
         .load::<String>(&db)?
         .into_iter()
