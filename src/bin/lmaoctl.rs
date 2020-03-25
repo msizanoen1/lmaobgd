@@ -7,7 +7,7 @@ use failure::ResultExt;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
 use lmaobgd::sql_funcs::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{stdin, Write};
 use structopt::StructOpt;
@@ -129,34 +129,29 @@ fn collapse(db: PgConnection) -> Result<(), failure::Error> {
 }
 
 fn dump(db: PgConnection) -> Result<(), failure::Error> {
-    let group_texts = groups::table
-        .filter(exists(
-            answers::table
-                .filter(answers::test_id.eq(groups::id))
-                .filter(answers::reviewed.eq(true)),
+    let answers: HashMap<String, HashMap<String, String>> = answers::table
+        .filter(answers::reviewed.eq(true))
+        .inner_join(groups::table)
+        .inner_join(question_strings::table)
+        .inner_join(answer_strings::table)
+        .select((
+            groups::text,
+            question_strings::question_string,
+            answer_strings::answer_string,
         ))
-        .select(groups::text)
-        .load::<String>(&db)?
+        .load::<(String, String, String)>(&db)?
         .into_iter()
-        .collect::<HashSet<_>>();
-    for group in group_texts {
-        let file_name = format!("{}.txt", group);
+        .fold(HashMap::new(), |mut groups, (test, question, answer)| {
+            groups
+                .entry(test)
+                .or_insert_with(|| HashMap::new())
+                .insert(question, answer);
+            groups
+        });
+    for (text, group) in answers {
+        let file_name = format!("{}.txt", text);
         let mut file = File::create(&file_name)?;
-        let answers = answers::table
-            .filter(exists(
-                groups::table
-                    .filter(groups::id.eq(answers::test_id))
-                    .filter(groups::text.eq(&group)),
-            ))
-            .filter(answers::reviewed.eq(true))
-            .inner_join(question_strings::table)
-            .inner_join(answer_strings::table)
-            .select((
-                question_strings::question_string,
-                answer_strings::answer_string,
-            ))
-            .load::<(String, String)>(&db)?;
-        for (qtext, atext) in answers {
+        for (qtext, atext) in group {
             let atext = process_answer2(&atext);
             let qtext = process_question2(&qtext);
             writeln!(file, "{}:::{}", qtext, atext)?;
