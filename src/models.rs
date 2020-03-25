@@ -2,7 +2,7 @@ use crate::schema::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Insertable, Queryable)]
+#[derive(Insertable, Queryable, Clone)]
 #[table_name = "answers"]
 pub struct Answer {
     pub question_id: i32,
@@ -12,19 +12,19 @@ pub struct Answer {
     pub valid_answers: Vec<i32>,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Clone)]
 pub struct AnswerMap {
     pub answer_id: i32,
     pub answer_string: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Clone)]
 pub struct QuestionMap {
     pub question_id: i32,
     pub question_string: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Clone)]
 pub struct Group {
     pub id: i32,
     pub text: String,

@@ -77,6 +77,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
             answers::answer_used.eq(excluded(answers::answer_used)),
             answers::reviewed.eq(false),
             answers::test_id.eq(group),
+            answers::valid_answers.eq(excluded(answers::valid_answers)),
         ))
         .execute(conn)?;
     Ok(())
@@ -85,8 +86,8 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
 pub fn js_get_data(conn: &PgConnection) -> QueryResult<HashMap<i32, i32>> {
     Ok(answers::table
         .filter(answers::reviewed.eq(true))
-        .load::<Answer>(conn)?
+        .select((answers::question_id, answers::answer_used))
+        .load(conn)?
         .into_iter()
-        .map(|ans| (ans.question_id, ans.answer_used))
         .collect())
 }

@@ -8,7 +8,8 @@ use failure::ResultExt;
 use lmaobgd::actions;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
 use std::io::{stdin, Write};
 use structopt::StructOpt;
 
@@ -58,32 +59,23 @@ fn process_question2(q: &str) -> String {
     format!("{}", iter.collect::<Vec<_>>().join("\n"))
 }
 
-fn get_question_string(db: &PgConnection, id: i32) -> QueryResult<String> {
-    Ok(process_question(&actions::get_question_string(db, id)?))
-}
-
-fn get_question_string2(db: &PgConnection, id: i32) -> QueryResult<String> {
-    Ok(process_question2(&actions::get_question_string(db, id)?))
-}
-
 fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
     let answer = actions::get_answer_string(db, id)?;
-    let mut iter = answer.lines().map(|s| s.trim()).filter(|s| *s != "");
-    Ok(format!(
+    Ok(process_answer(&answer))
+}
+
+fn process_answer(s: &str) -> String {
+    let mut iter = s.lines().map(|s| s.trim()).filter(|s| *s != "");
+    format!(
         "{} {}",
         iter.next().unwrap_or(""),
         iter.collect::<Vec<_>>().join("\n")
-    ))
+    )
 }
 
-fn get_answer_string2(db: &PgConnection, id: i32) -> QueryResult<String> {
-    let answer = actions::get_answer_string(db, id)?;
-    let iter = answer
-        .lines()
-        .map(|s| s.trim())
-        .filter(|s| *s != "")
-        .skip(1);
-    Ok(format!("{}", iter.collect::<Vec<_>>().join("\n")))
+fn process_answer2(s: &str) -> String {
+    let iter = s.lines().map(|s| s.trim()).filter(|s| *s != "").skip(1);
+    format!("{}", iter.collect::<Vec<_>>().join("\n"))
 }
 
 #[derive(StructOpt)]
@@ -119,16 +111,17 @@ fn main() -> Result<(), ExitFailure> {
 }
 
 fn collapse(db: PgConnection) -> Result<(), failure::Error> {
-    let group_texts = groups::table
-        .select(groups::text)
-        .load::<String>(&db)?
-        .into_iter()
-        .collect::<HashSet<_>>();
-    for text in group_texts {
-        let group_ids = groups::table
-            .filter(groups::text.eq(&text))
-            .select(groups::id)
-            .load::<i32>(&db)?;
+    let groups =
+        groups::table
+            .load::<Group>(&db)?
+            .into_iter()
+            .fold(HashMap::new(), |mut acc, group| {
+                acc.entry(group.text)
+                    .or_insert_with(|| Vec::new())
+                    .push(group.id);
+                acc
+            });
+    for group_ids in groups.values() {
         if group_ids.len() > 1 {
             // There is many group of same name
             let base_id = group_ids[0];
@@ -142,23 +135,31 @@ fn collapse(db: PgConnection) -> Result<(), failure::Error> {
 }
 
 fn dump(db: PgConnection) -> Result<(), failure::Error> {
-    let groups = group_rev(&db)?;
-    for group in groups {
-        let file_name = format!("{}.txt", group.text);
-        let mut file = std::fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(&file_name)?;
+    let group_texts = groups::table
+        .select(groups::text)
+        .load::<String>(&db)?
+        .into_iter()
+        .collect::<HashSet<_>>();
+    for group in group_texts {
+        let file_name = format!("{}.txt", group);
+        let mut file = File::create(&file_name)?;
         let answers = answers::table
-            .filter(
-                answers::test_id
-                    .eq(group.id)
-                    .and(answers::reviewed.eq(true)),
-            )
-            .load::<Answer>(&db)?;
-        for answer in answers {
-            let atext = get_answer_string2(&db, answer.answer_used)?;
-            let qtext = get_question_string2(&db, answer.question_id)?;
+            .filter(exists(
+                groups::table
+                    .filter(groups::id.eq(answers::test_id))
+                    .filter(groups::text.eq(&group)),
+            ))
+            .filter(answers::reviewed.eq(true))
+            .inner_join(question_strings::table)
+            .inner_join(answer_strings::table)
+            .select((
+                question_strings::question_string,
+                answer_strings::answer_string,
+            ))
+            .load::<(String, String)>(&db)?;
+        for (qtext, atext) in answers {
+            let atext = process_answer2(&atext);
+            let qtext = process_question2(&qtext);
             writeln!(file, "{}:::{}", qtext, atext)?;
         }
     }
@@ -182,24 +183,9 @@ fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
 fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
     Ok(groups::table
         .filter(exists(
-            answers::table.filter(
-                groups::id
-                    .eq(answers::test_id)
-                    .and(answers::reviewed.eq(false)),
-            ),
-        ))
-        .load(db)
-        .context("unable to get groups")?)
-}
-
-fn group_rev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
-    Ok(groups::table
-        .filter(exists(
-            answers::table.filter(
-                groups::id
-                    .eq(answers::test_id)
-                    .and(answers::reviewed.eq(true)),
-            ),
+            answers::table
+                .filter(groups::id.eq(answers::test_id))
+                .filter(answers::reviewed.eq(false)),
         ))
         .load(db)
         .context("unable to get groups")?)
@@ -217,33 +203,43 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     let id: i32 = input.trim().parse()?;
     let answers = answers::table
         .filter(answers::test_id.eq(id))
-        .load::<Answer>(&db)
+        .inner_join(question_strings::table)
+        .inner_join(answer_strings::table)
+        .load::<(Answer, QuestionMap, AnswerMap)>(&db)
         .context("unable to get answers")?;
     println!("Questions:");
-    for answer in answers {
+    let mut question_cache_text = HashMap::new();
+    let mut question_cache = HashMap::new();
+    let mut used_cache = HashMap::new();
+    for (answer, question, used) in answers {
         let question_id = answer.question_id;
         let reviewed = if answer.reviewed {
             "reviewed"
         } else {
             "unreviewed"
         };
-        let text = get_question_string(&db, question_id)?;
+        let text = process_question(&question.question_string);
         println!("{} ({}) ({})", question_id, reviewed, text);
+        question_cache.insert(question_id, answer.clone());
+        question_cache_text.insert(question_id, text);
+        used_cache.insert(used.answer_id, process_answer(&used.answer_string));
     }
     println!("Enter question ID:");
     input.clear();
     stdin().read_line(&mut input)?;
     let id: i32 = input.trim().parse()?;
-    let question = answers::table.find(id).get_result::<Answer>(&db)?;
-    println!("Question {}: {}", id, get_question_string(&db, id)?);
+    let question = question_cache
+        .get(&id)
+        .ok_or_else(|| failure::format_err!("Question not found"))?;
+    println!("Question {}: {}", id, question_cache_text.get(&id).unwrap());
     println!("Possible answers:");
-    for answer in question.valid_answers {
-        println!("{} ({})", answer, get_answer_string(&db, answer)?);
+    for answer in &question.valid_answers {
+        println!("{} ({})", answer, get_answer_string(&db, *answer)?);
     }
     println!(
         "Answer used: {} ({})",
         question.answer_used,
-        get_answer_string(&db, question.answer_used)?
+        used_cache.get(&question.answer_used).unwrap()
     );
     Ok(())
 }
@@ -261,21 +257,18 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
     let unreviewed = answers::table
         .filter(answers::reviewed.eq(false))
         .filter(answers::test_id.eq(id))
-        .load::<Answer>(&db)
+        .inner_join(question_strings::table)
+        .inner_join(answer_strings::table)
+        .load::<(Answer, QuestionMap, AnswerMap)>(&db)
         .context("unable to get unreviewed data")?;
-    for answer in unreviewed {
-        let question_id = answer.question_id;
-        let question = get_question_string(&db, question_id)?;
-        println!("Question {} ({}):", question_id, question);
+    for (answer, question, used) in unreviewed {
+        let question_text = process_question(&question.question_string);
+        println!("Question {} ({}):", question.question_id, question_text);
         println!("Possible answers:");
         for answer in answer.valid_answers {
             println!("{} ({})", answer, get_answer_string(&db, answer)?);
         }
-        println!(
-            "Answer used: {} ({})",
-            answer.answer_used,
-            get_answer_string(&db, answer.answer_used)?
-        );
+        println!("Answer used: {} ({})", used.answer_id, used.answer_string);
         loop {
             print!(
                 r#"Select action:
@@ -302,7 +295,7 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
                 println!(
                     "Updated question {} ({}) to {} ({})",
                     answer.question_id,
-                    get_question_string(&db, answer.question_id)?,
+                    question_text,
                     input,
                     get_answer_string(&db, input)?
                 );
