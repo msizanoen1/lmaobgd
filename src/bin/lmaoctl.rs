@@ -1,13 +1,12 @@
 use diesel::dsl::exists;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::QueryResult;
 use dotenv::dotenv;
 use exitfailure::ExitFailure;
 use failure::ResultExt;
-use lmaobgd::actions;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
+use lmaobgd::sql_funcs::*;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{stdin, Write};
@@ -57,11 +56,6 @@ fn process_question2(q: &str) -> String {
     vec.truncate(vec.len() - n);
     let iter = vec.into_iter().skip(1);
     format!("{}", iter.collect::<Vec<_>>().join("\n"))
-}
-
-fn get_answer_string(db: &PgConnection, id: i32) -> QueryResult<String> {
-    let answer = actions::get_answer_string(db, id)?;
-    Ok(process_answer(&answer))
 }
 
 fn process_answer(s: &str) -> String {
@@ -205,13 +199,19 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
         .filter(answers::test_id.eq(id))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
-        .load::<(Answer, QuestionMap, AnswerMap)>(&db)
+        .select((
+            answers::all_columns,
+            question_strings::all_columns,
+            answer_strings::all_columns,
+            get_answer_strings(answers::valid_answers),
+        ))
+        .load::<(Answer, QuestionMap, AnswerMap, Vec<String>)>(&db)
         .context("unable to get answers")?;
     println!("Questions:");
     let mut question_cache_text = HashMap::new();
     let mut question_cache = HashMap::new();
-    let mut used_cache = HashMap::new();
-    for (answer, question, used) in answers {
+    let mut answer_cache = HashMap::new();
+    for (answer, question, used, valid_text) in answers {
         let question_id = answer.question_id;
         let reviewed = if answer.reviewed {
             "reviewed"
@@ -222,7 +222,10 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
         println!("{} ({}) ({})", question_id, reviewed, text);
         question_cache.insert(question_id, answer.clone());
         question_cache_text.insert(question_id, text);
-        used_cache.insert(used.answer_id, process_answer(&used.answer_string));
+        answer_cache.insert(used.answer_id, process_answer(&used.answer_string));
+        for (idx, id) in answer.valid_answers.iter().copied().enumerate() {
+            answer_cache.insert(id, valid_text[idx].clone());
+        }
     }
     println!("Enter question ID:");
     input.clear();
@@ -234,12 +237,12 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     println!("Question {}: {}", id, question_cache_text.get(&id).unwrap());
     println!("Possible answers:");
     for answer in &question.valid_answers {
-        println!("{} ({})", answer, get_answer_string(&db, *answer)?);
+        println!("{} ({})", answer, answer_cache.get(answer).unwrap());
     }
     println!(
         "Answer used: {} ({})",
         question.answer_used,
-        used_cache.get(&question.answer_used).unwrap()
+        answer_cache.get(&question.answer_used).unwrap()
     );
     Ok(())
 }
@@ -259,14 +262,22 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
         .filter(answers::test_id.eq(id))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
-        .load::<(Answer, QuestionMap, AnswerMap)>(&db)
+        .select((
+            answers::all_columns,
+            question_strings::all_columns,
+            answer_strings::all_columns,
+            get_answer_strings(answers::valid_answers),
+        ))
+        .load::<(Answer, QuestionMap, AnswerMap, Vec<String>)>(&db)
         .context("unable to get unreviewed data")?;
-    for (answer, question, used) in unreviewed {
+    let mut answer_text_cache = HashMap::new();
+    for (answer, question, used, all) in unreviewed {
         let question_text = process_question(&question.question_string);
         println!("Question {} ({}):", question.question_id, question_text);
         println!("Possible answers:");
-        for answer in answer.valid_answers {
-            println!("{} ({})", answer, get_answer_string(&db, answer)?);
+        for idx in 0..answer.valid_answers.len() {
+            println!("{} ({})", answer.valid_answers[idx], all[idx]);
+            answer_text_cache.insert(answer.valid_answers[idx], all[idx].clone());
         }
         println!("Answer used: {} ({})", used.answer_id, used.answer_string);
         loop {
@@ -297,7 +308,10 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
                     answer.question_id,
                     question_text,
                     input,
-                    get_answer_string(&db, input)?
+                    answer_text_cache
+                        .get(&input)
+                        .map(|x| &x[..])
+                        .unwrap_or("INVALID ANSWER ID")
                 );
             } else if input == 2 {
                 diesel::delete(answers::table.find(answer.question_id)).execute(&db)?;
