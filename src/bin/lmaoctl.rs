@@ -283,7 +283,11 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
                 answer_text_cache.get(&id).unwrap()
             );
         }
-        println!("Answer used: {} ({})", used.answer_id, used.answer_string);
+        println!(
+            "Answer used: {} ({})",
+            used.answer_id,
+            process_answer(&used.answer_string)
+        );
         loop {
             print!(
                 r#"Select action:
