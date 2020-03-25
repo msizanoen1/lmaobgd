@@ -7,18 +7,18 @@ DECLARE
 BEGIN
     FOREACH id IN ARRAY $1
     LOOP
-        FOR current_text IN SELECT
-            answer_string AS current_text
+        SELECT
+            answer_string
+        INTO
+            current_text
         FROM
             answer_strings
         WHERE
-            answer_id = id
-        LOOP
-            result[idx] := current_text;
-        END LOOP;
+            answer_id = id;
         IF NOT FOUND THEN
             RAISE EXCEPTION 'No string for answer %1', id;
         END IF;
+        result[idx] := current_text;
         idx := idx + 1;
     END LOOP;
     RETURN result;
