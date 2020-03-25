@@ -1,4 +1,4 @@
-use diesel::dsl::exists;
+use diesel::dsl::{exists, not};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
@@ -130,7 +130,7 @@ fn collapse(db: PgConnection) -> Result<(), failure::Error> {
 
 fn dump(db: PgConnection) -> Result<(), failure::Error> {
     let answers: HashMap<String, HashMap<String, String>> = answers::table
-        .filter(answers::reviewed.eq(true))
+        .filter(answers::reviewed)
         .inner_join(groups::table)
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
@@ -179,7 +179,7 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
         .filter(exists(
             answers::table
                 .filter(groups::id.eq(answers::test_id))
-                .filter(answers::reviewed.eq(false)),
+                .filter(not(answers::reviewed)),
         ))
         .load(db)
         .context("unable to get groups")?)
@@ -258,7 +258,7 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
     stdin().read_line(&mut input)?;
     let id = input.trim().parse::<i32>()?;
     let unreviewed = answers::table
-        .filter(answers::reviewed.eq(false))
+        .filter(not(answers::reviewed))
         .filter(answers::test_id.eq(id))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)

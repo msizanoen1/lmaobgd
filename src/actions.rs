@@ -85,7 +85,7 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
 
 pub fn js_get_data(conn: &PgConnection) -> QueryResult<HashMap<i32, i32>> {
     Ok(answers::table
-        .filter(answers::reviewed.eq(true))
+        .filter(answers::reviewed)
         .select((answers::question_id, answers::answer_used))
         .load(conn)?
         .into_iter()
