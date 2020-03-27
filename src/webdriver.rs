@@ -63,10 +63,7 @@ impl WebDriver {
                                 });
                             } else {
                                 tokio::spawn(async move {
-                                    let mut buf = vec![0u8; 512];
-                                    loop {
-                                        let _ = stdout.read(&mut buf[..]).await;
-                                    }
+                                    let _ = tokio::io::copy(&mut stdout, &mut tokio::io::sink()).await;
                                 });
                             }
                             let mut wd = WebDriver::new(&url, HashMap::new(), vec![caps]).await?;
