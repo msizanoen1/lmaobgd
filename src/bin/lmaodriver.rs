@@ -273,17 +273,19 @@ async fn run(
         answer_map: answer_maps,
         question_map: question_maps,
     };
-    let upload_url = format!("{}/upload?key={}", api, key);
+    let upload_url = format!("{}/upload", api);
     client
         .post(&upload_url)
+        .basic_auth("lmaobgd_api", Some(key))
         .json(&js_api_data)
         .send()
         .await?
         .error_for_status()?;
     if let Some(correct) = correct {
-        let set_correct_url = format!("{}/set_reviewed?key={}", api, key);
+        let set_correct_url = format!("{}/set_reviewed", api);
         client
             .post(&set_correct_url)
+            .basic_auth("lmaobgd_api", Some(key))
             .json(&correct)
             .send()
             .await?

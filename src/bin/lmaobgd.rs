@@ -1,10 +1,10 @@
 use actix_cors::Cors;
 use actix_web::http::header;
 use actix_web::{get, middleware, post, web, App, FromRequest, HttpResponse, HttpServer};
+use actix_web_httpauth::extractors::basic::BasicAuth;
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use lmaobgd::{actions, models};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -12,30 +12,25 @@ use structopt::StructOpt;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-#[derive(Copy, Clone)]
-struct DoAuth(bool);
-
-#[derive(Deserialize)]
-struct Auth {
-    key: Option<String>,
-}
-
 #[post("/upload")]
 async fn api_upload(
     pool: web::Data<DbPool>,
-    web::Query(auth): web::Query<Auth>,
-    do_auth: web::Data<DoAuth>,
+    auth: BasicAuth,
     web::Json(json): web::Json<models::JsApiUpload>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let db = web::block(move || pool.get()).await?;
     let db = Arc::new(Mutex::new(db));
-    if do_auth.0 {
-        let key = auth.key.ok_or_else(|| HttpResponse::BadRequest())?;
-        let db = Arc::clone(&db);
-        let result = web::block(move || actions::check_api_key(&db.lock().unwrap(), &key)).await?;
-        if !result {
-            return Err(HttpResponse::Forbidden().into());
-        }
+    if auth.user_id() != "lmaobgd_api" {
+        return Err(HttpResponse::Unauthorized().into());
+    }
+    let key = auth
+        .password()
+        .ok_or_else(|| HttpResponse::Unauthorized())?
+        .clone();
+    let db2 = Arc::clone(&db);
+    let result = web::block(move || actions::check_api_key(&db2.lock().unwrap(), &key)).await?;
+    if !result {
+        return Err(HttpResponse::Unauthorized().into());
     }
     web::block(move || actions::upload_call(&db.lock().unwrap(), json)).await?;
     Ok(HttpResponse::Ok().finish())
@@ -54,18 +49,21 @@ async fn api_data(
 async fn api_set_reviewed(
     pool: web::Data<DbPool>,
     web::Json(ids): web::Json<Vec<i32>>,
-    web::Query(auth): web::Query<Auth>,
-    do_auth: web::Data<DoAuth>,
+    auth: BasicAuth,
 ) -> Result<HttpResponse, actix_web::Error> {
     let db = web::block(move || pool.get()).await?;
     let db = Arc::new(Mutex::new(db));
-    if do_auth.0 {
-        let key = auth.key.ok_or_else(|| HttpResponse::BadRequest())?;
-        let db = Arc::clone(&db);
-        let result = web::block(move || actions::check_api_key(&db.lock().unwrap(), &key)).await?;
-        if !result {
-            return Err(HttpResponse::Forbidden().into());
-        }
+    if auth.user_id() != "lmaobgd_api" {
+        return Err(HttpResponse::Unauthorized().into());
+    }
+    let key = auth
+        .password()
+        .ok_or_else(|| HttpResponse::Unauthorized())?
+        .clone();
+    let db2 = Arc::clone(&db);
+    let result = web::block(move || actions::check_api_key(&db2.lock().unwrap(), &key)).await?;
+    if !result {
+        return Err(HttpResponse::Unauthorized().into());
     }
     web::block(move || actions::set_reviewed(&db.lock().unwrap(), &ids)).await?;
     Ok(HttpResponse::Ok().finish())
@@ -89,8 +87,6 @@ fn cors() -> actix_cors::CorsFactory {
 struct Args {
     #[structopt(short, long, default_value = "0.0.0.0:5000")]
     bind: SocketAddr,
-    #[structopt(short = "a", long)]
-    do_auth: bool,
 }
 
 #[actix_rt::main]
@@ -102,12 +98,10 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let db = std::env::var("DATABASE_URL")?;
     let cm = ConnectionManager::new(&db);
     let pool = DbPool::builder().build(cm)?;
-    let do_auth = args.do_auth;
 
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(DoAuth(do_auth))
             .app_data(web::Json::<models::JsApiUpload>::configure(|cfg| {
                 cfg.limit(128 * 1024 * 1024)
             }))
