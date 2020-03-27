@@ -16,6 +16,13 @@ table! {
 }
 
 table! {
+    api_keys (id) {
+        id -> Int4,
+        hash -> Bytea,
+    }
+}
+
+table! {
     groups (id) {
         id -> Int4,
         text -> Text,
@@ -36,6 +43,7 @@ joinable!(answers -> question_strings (question_id));
 allow_tables_to_appear_in_same_query!(
     answer_strings,
     answers,
+    api_keys,
     groups,
     question_strings,
 );

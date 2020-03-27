@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use exitfailure::ExitFailure;
 use failure::ResultExt;
+use lmaobgd::actions::gen_api_key;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
 use lmaobgd::sql_funcs::*;
@@ -80,6 +81,7 @@ enum Command {
     DeleteQuestion { id: i32 },
     Dump,
     Collapse,
+    ApiKey,
 }
 
 #[derive(StructOpt)]
@@ -88,6 +90,12 @@ struct Args {
     database_url: String,
     #[structopt(subcommand)]
     command: Command,
+}
+
+fn new_api_key(db: PgConnection) -> Result<(), failure::Error> {
+    let key = gen_api_key(&db)?;
+    println!("{}", key);
+    Ok(())
 }
 
 fn main() -> Result<(), ExitFailure> {
@@ -101,6 +109,7 @@ fn main() -> Result<(), ExitFailure> {
         Command::DeleteQuestion { id } => del_question(db, id)?,
         Command::Dump => dump(db)?,
         Command::Collapse => collapse(db)?,
+        Command::ApiKey => new_api_key(db)?,
     }
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::schema::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Insertable, Queryable, Clone)]
@@ -51,7 +51,7 @@ pub struct NewGroup<'a> {
     pub text: &'a str,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsApiUpload {
     pub group: i32,
@@ -61,9 +61,15 @@ pub struct JsApiUpload {
     pub unknown_questions: HashMap<i32, UnknownQuestion>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UnknownQuestion {
     pub answers: Vec<i32>,
     pub answer_used: i32,
+}
+
+#[derive(Queryable, Clone)]
+pub struct ApiKey {
+    pub id: i32,
+    pub hash: String,
 }

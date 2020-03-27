@@ -1,10 +1,32 @@
 use crate::models::*;
 use crate::schema::*;
+use blake2::Blake2b;
+use diesel::dsl::{exists, select};
+use diesel::pg::expression::dsl::any;
 use diesel::pg::upsert::excluded;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::QueryResult;
+use digest::Digest;
+use once_cell::sync::Lazy;
+use rand::prelude::*;
 use std::collections::HashMap;
+
+fn generate_api_key(length: u64) -> String {
+    static CHARS: Lazy<Vec<char>> = Lazy::new(|| {
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+            .chars()
+            .into_iter()
+            .collect()
+    });
+    let mut result = String::new();
+    let mut rng = rand::thread_rng();
+    for _ in 0..length {
+        let idx = rng.gen_range(0, CHARS.len());
+        result.push(CHARS[idx]);
+    }
+    result
+}
 
 pub fn get_answer_string(conn: &PgConnection, id: i32) -> QueryResult<String> {
     Ok(answer_strings::table
@@ -20,7 +42,7 @@ pub fn get_question_string(conn: &PgConnection, id: i32) -> QueryResult<String> 
         .question_string)
 }
 
-pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
+pub fn upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
     let answer_map = data
         .answer_map
         .iter()
@@ -83,11 +105,32 @@ pub fn js_upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()>
     Ok(())
 }
 
-pub fn js_get_data(conn: &PgConnection) -> QueryResult<HashMap<i32, i32>> {
+pub fn get_data(conn: &PgConnection) -> QueryResult<HashMap<i32, i32>> {
     Ok(answers::table
         .filter(answers::reviewed)
         .select((answers::question_id, answers::answer_used))
         .load(conn)?
         .into_iter()
         .collect())
+}
+
+pub fn set_reviewed(conn: &PgConnection, ids: &[i32]) -> QueryResult<()> {
+    diesel::update(answers::table.filter(answers::question_id.eq(any(ids))))
+        .set(answers::reviewed.eq(true))
+        .execute(conn)?;
+    Ok(())
+}
+
+pub fn gen_api_key(conn: &PgConnection) -> QueryResult<String> {
+    let key = generate_api_key(128);
+    let hash = Blake2b::digest(key.as_bytes());
+    diesel::insert_into(api_keys::table)
+        .values(api_keys::hash.eq(&hash[..]))
+        .execute(conn)?;
+    Ok(key)
+}
+
+pub fn check_api_key(conn: &PgConnection, key: &str) -> QueryResult<bool> {
+    let hash = Blake2b::digest(key.as_bytes());
+    select(exists(api_keys::table.filter(api_keys::hash.eq(&hash[..])))).get_result::<bool>(conn)
 }

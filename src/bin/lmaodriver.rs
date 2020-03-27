@@ -1,21 +1,14 @@
-use diesel::pg::expression::dsl::any;
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
 use dotenv::dotenv;
-use lmaobgd::actions;
 use lmaobgd::models::*;
-use lmaobgd::schema::*;
 use lmaobgd::webdriver::*;
 use rand::prelude::*;
+use reqwest::Client;
 use std::collections::HashMap;
 use std::iter::once;
 use std::mem::take;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 use structopt::StructOpt;
 use tokio::signal::ctrl_c;
-use tokio::task::spawn_blocking;
 use tokio::time::delay_for;
 
 fn num_list(data: &str) -> Vec<usize> {
@@ -65,9 +58,12 @@ fn process_question(q: &str) -> String {
 /// LmaoBGD WebDriver
 #[derive(StructOpt)]
 struct Args {
-    /// URL for PostgreSQL database
-    #[structopt(short, long, env = "DATABASE_URL")]
-    database_url: String,
+    /// The API key for API
+    #[structopt(short = "k", long, env = "LMAOBGD_API_KEY")]
+    api_key: String,
+    /// URL of API server
+    #[structopt(short, long, default_value = "http://localhost:5000/api")]
+    api_url: String,
     /// Dont't auto close after 30s
     #[structopt(short, long)]
     no_autoclose: bool,
@@ -105,12 +101,9 @@ struct Args {
 async fn main() -> Result<(), exitfailure::ExitFailure> {
     let _ = dotenv();
     let args = Args::from_args();
-    let url = args.database_url.clone();
-    let db = Arc::new(Mutex::new(
-        spawn_blocking(move || PgConnection::establish(&url)).await??,
-    ));
     let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless, args.verbose).await?;
     let password_txt = args.password.as_ref().unwrap_or(&args.id);
+    let client = Client::new();
 
     let main = async {
         wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
@@ -122,7 +115,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
         wd.element_click(&button).await?;
 
-        while run(&wd, &args, Arc::clone(&db)).await? {
+        while run(&wd, &args, &args.api_url, &args.api_key, &client).await? {
             // repeat
         }
         Ok::<_, failure::Error>(())
@@ -148,11 +141,19 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
 async fn run(
     wd: &WebDriver,
     args: &Args,
-    db: Arc<Mutex<PgConnection>>,
+    api: &str,
+    key: &str,
+    client: &Client,
 ) -> Result<bool, failure::Error> {
     let test_url = &args.test_url;
-    let db2 = Arc::clone(&db);
-    let data = spawn_blocking(move || actions::js_get_data(&db2.lock().unwrap())).await??;
+    let data_url = format!("{}/data", api);
+    let data = client
+        .get(&data_url)
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<HashMap<i32, i32>>()
+        .await?;
     wd.navigate(test_url).await?;
     let start = wd.get_element(Using::CssSelector, "#start-test").await?;
     wd.element_click(&start).await?;
@@ -272,15 +273,21 @@ async fn run(
         answer_map: answer_maps,
         question_map: question_maps,
     };
-    let db2 = Arc::clone(&db);
-    spawn_blocking(move || actions::js_upload_call(&db2.lock().unwrap(), js_api_data)).await??;
+    let upload_url = format!("{}/upload?key={}", api, key);
+    client
+        .post(&upload_url)
+        .json(&js_api_data)
+        .send()
+        .await?
+        .error_for_status()?;
     if let Some(correct) = correct {
-        spawn_blocking(move || {
-            diesel::update(answers::table.filter(answers::question_id.eq(any(&correct))))
-                .set(answers::reviewed.eq(true))
-                .execute(&db.lock().unwrap() as &PgConnection)
-        })
-        .await??;
+        let set_correct_url = format!("{}/set_reviewed?key={}", api, key);
+        client
+            .post(&set_correct_url)
+            .json(&correct)
+            .send()
+            .await?
+            .error_for_status()?;
     }
     Ok(has_incorrect && args.crack)
 }
