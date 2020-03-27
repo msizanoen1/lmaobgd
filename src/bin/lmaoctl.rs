@@ -1,4 +1,5 @@
 use diesel::dsl::{exists, not};
+use diesel::pg::expression::dsl::any;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
@@ -120,7 +121,7 @@ fn collapse(db: PgConnection) -> Result<(), failure::Error> {
             // There is many group of same name
             let base_id = group_ids[0];
             let other_ids = &group_ids[1..];
-            diesel::update(answers::table.filter(answers::test_id.eq_any(other_ids)))
+            diesel::update(answers::table.filter(answers::test_id.eq(any(other_ids))))
                 .set(answers::test_id.eq(base_id))
                 .execute(&db)?;
         }

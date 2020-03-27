@@ -1,3 +1,4 @@
+use diesel::pg::expression::dsl::any;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
@@ -271,7 +272,7 @@ async fn run(
     spawn_blocking(move || actions::js_upload_call(&db2.lock().unwrap(), js_api_data)).await??;
     if let Some(correct) = correct {
         spawn_blocking(move || {
-            diesel::update(answers::table.filter(answers::question_id.eq_any(&correct)))
+            diesel::update(answers::table.filter(answers::question_id.eq(any(&correct))))
                 .set(answers::reviewed.eq(true))
                 .execute(&db.lock().unwrap() as &PgConnection)
         })
