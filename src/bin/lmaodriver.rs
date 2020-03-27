@@ -92,6 +92,9 @@ struct Args {
     /// Geckodriver command to use
     #[structopt(short, long)]
     geckodriver: Option<String>,
+    /// Password to use (defaults to ID)
+    #[structopt(short, long)]
+    password: Option<String>,
     /// Account ID
     id: String,
     /// URL to navigate
@@ -107,6 +110,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         spawn_blocking(move || PgConnection::establish(&url)).await??,
     ));
     let wd = WebDriver::new_firefox(args.geckodriver.as_ref(), args.headless, args.verbose).await?;
+    let password_txt = args.password.as_ref().unwrap_or(&args.id);
 
     let main = async {
         wd.navigate("http://study.hanoi.edu.vn/dang-nhap?returnUrl=/")
@@ -114,7 +118,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
         let username = wd.get_element(Using::CssSelector, "#UserName").await?;
         let password = wd.get_element(Using::CssSelector, "#Password").await?;
         wd.element_send_keys(&username, &args.id).await?;
-        wd.element_send_keys(&password, &args.id).await?;
+        wd.element_send_keys(&password, password_txt).await?;
         let button = wd.get_element(Using::CssSelector, "#AjaxLogin").await?;
         wd.element_click(&button).await?;
 
