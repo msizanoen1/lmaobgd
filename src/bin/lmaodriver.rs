@@ -89,7 +89,7 @@ struct Args {
     #[structopt(short, long)]
     geckodriver: Option<String>,
     /// Password to use (defaults to ID)
-    #[structopt(short, long)]
+    #[structopt(short, long, env = "LMAODRIVER_PASSWORD", hide_env_values = true)]
     password: Option<String>,
     /// Account ID
     id: String,
