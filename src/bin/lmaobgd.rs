@@ -87,6 +87,8 @@ fn cors() -> actix_cors::CorsFactory {
 struct Args {
     #[structopt(short, long, default_value = "0.0.0.0:5000")]
     bind: SocketAddr,
+    #[structopt(short, long, env, hide_env_values = true)]
+    database_url: String,
 }
 
 #[actix_rt::main]
@@ -95,8 +97,7 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let _ = dotenv::dotenv();
     let args = Args::from_args();
 
-    let db = std::env::var("DATABASE_URL")?;
-    let cm = ConnectionManager::new(&db);
+    let cm = ConnectionManager::new(&args.database_url);
     let pool = DbPool::builder().build(cm)?;
 
     HttpServer::new(move || {

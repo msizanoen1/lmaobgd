@@ -59,7 +59,7 @@ fn process_question(q: &str) -> String {
 #[derive(StructOpt)]
 struct Args {
     /// The API key for API
-    #[structopt(short = "k", long, env = "LMAOBGD_API_KEY")]
+    #[structopt(short = "k", long, env = "LMAOBGD_API_KEY", hide_env_values = true)]
     api_key: String,
     /// URL of API server
     #[structopt(long, default_value = "http://localhost:5000/api")]

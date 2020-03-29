@@ -86,7 +86,7 @@ enum Command {
 
 #[derive(StructOpt)]
 struct Args {
-    #[structopt(short, long, env = "DATABASE_URL")]
+    #[structopt(short, long, env = "DATABASE_URL", hide_env_values = true)]
     database_url: String,
     #[structopt(subcommand)]
     command: Command,
