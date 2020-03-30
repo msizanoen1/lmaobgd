@@ -22,20 +22,21 @@ class LmaoBGD {
       };
     }
     for (const key of this.questionsMap.keys()) {
-        payload.questionMap[key] = this.questionsMap.get(key);
+      payload.questionMap[key] = this.questionsMap.get(key);
     }
     for (const key of this.answersMap.keys()) {
-        payload.answerMap[key] = this.answersMap.get(key);
+      payload.answerMap[key] = this.answersMap.get(key);
     }
     return payload;
   }
 
-  async upload(url = "http://localhost:5000/api/upload") {
+  async upload(url = "http://localhost:5000/api/upload", key: string) {
     try {
       const resp = await fetch(url, {
         method: "POST",
         headers: {
-          "Content-Type": "text/json"
+          "Content-Type": "text/json",
+          Authorization: `Basic ${btoa(`${key}:`)}`
         },
         body: JSON.stringify(this.serverPayload())
       });
@@ -49,9 +50,13 @@ class LmaoBGD {
     }
   }
 
-  async getData(url = "http://localhost:5000/api/data") {
+  async getData(url = "http://localhost:5000/api/data", key: string) {
     try {
-      const resp = await fetch(url);
+      const resp = await fetch(url, {
+        headers: {
+          Authorization: `Basic ${btoa(`${key}:`)}`
+        }
+      });
       if (resp.ok) {
         const json: any = await resp.json();
         for (const key in json) {
@@ -65,12 +70,12 @@ class LmaoBGD {
     }
   }
 
-  static async run(api = "http://localhost:5000/api") {
+  static async run(api = "http://localhost:5000/api", key: string) {
     const lmao = new LmaoBGD();
     lmao.runScrape();
-    await lmao.getData(`${api}/data`);
+    await lmao.getData(`${api}/data`, key);
     lmao.fillAnswer();
-    await lmao.upload(`${api}/upload`);
+    await lmao.upload(`${api}/upload`, key);
   }
 
   constructor(
@@ -143,7 +148,7 @@ class LmaoBGD {
       if (allAnswers == null) continue;
       let currentAnswer = this.answersData.get(key);
       if (currentAnswer == null) {
-        const idx = Math.floor(Math.random() * 4);
+        const idx = Math.floor(Math.random() * allAnswers.length);
         currentAnswer = allAnswers[idx];
         this.unknownQuestions.set(key, currentAnswer);
       }
@@ -160,7 +165,9 @@ class LmaoBGD {
       const answer = this.unknownQuestions.get(key);
       if (answer == null) continue;
       const text = this.answersMap.get(answer);
-      console.log(`${key} (${this.questionsMap.get(key)}): ${answer} (${text})`);
+      console.log(
+        `${key} (${this.questionsMap.get(key)}): ${answer} (${text})`
+      );
     }
   }
 }
