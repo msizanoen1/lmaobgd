@@ -36,7 +36,7 @@ class LmaoBGD {
         method: "POST",
         headers: {
           "Content-Type": "text/json",
-          Authorization: 'Basic ' + btoa(auth + ':')
+          Authorization: "Basic " + btoa(auth + ":")
         },
         body: JSON.stringify(this.serverPayload())
       });
@@ -54,7 +54,7 @@ class LmaoBGD {
     try {
       const resp = await fetch(url, {
         headers: {
-          Authorization: 'Basic ' + btoa(auth + ':')
+          Authorization: "Basic " + btoa(auth + ":")
         }
       });
       if (resp.ok) {
