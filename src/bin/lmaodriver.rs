@@ -257,7 +257,7 @@ async fn run(
         })
         .collect::<HashMap<_, _>>();
     let js_api_data = JsApiUpload {
-        group: 0,
+        group: None,
         group_text: title,
         unknown_questions,
         answer_map: answer_maps,
