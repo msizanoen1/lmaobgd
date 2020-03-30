@@ -19,6 +19,8 @@ table! {
     api_keys (id) {
         id -> Int4,
         hash -> Bytea,
+        write_access -> Bool,
+        note -> Nullable<Text>,
     }
 }
 

@@ -71,5 +71,15 @@ pub struct UnknownQuestion {
 #[derive(Queryable, Clone)]
 pub struct ApiKey {
     pub id: i32,
-    pub hash: String,
+    pub hash: Vec<u8>,
+    pub write_access: bool,
+    pub note: Option<String>,
+}
+
+#[derive(Insertable, Clone)]
+#[table_name = "api_keys"]
+pub struct NewApiKey<'a> {
+    pub hash: &'a [u8],
+    pub write_access: bool,
+    pub note: Option<&'a str>,
 }

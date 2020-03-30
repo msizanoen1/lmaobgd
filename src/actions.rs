@@ -1,7 +1,6 @@
 use crate::models::*;
 use crate::schema::*;
 use blake2::Blake2b;
-use diesel::dsl::{exists, select};
 use diesel::pg::expression::dsl::any;
 use diesel::pg::upsert::excluded;
 use diesel::pg::PgConnection;
@@ -121,16 +120,42 @@ pub fn set_reviewed(conn: &PgConnection, ids: &[i32]) -> QueryResult<()> {
     Ok(())
 }
 
-pub fn gen_api_key(conn: &PgConnection) -> QueryResult<String> {
+pub fn gen_api_key(
+    conn: &PgConnection,
+    note: Option<&str>,
+    write_access: bool,
+) -> QueryResult<String> {
     let key = generate_api_key(128);
     let hash = Blake2b::digest(key.as_bytes());
+    let new = NewApiKey {
+        hash: &hash[..],
+        note,
+        write_access,
+    };
     diesel::insert_into(api_keys::table)
-        .values(api_keys::hash.eq(&hash[..]))
+        .values(&new)
         .execute(conn)?;
     Ok(key)
 }
 
-pub fn check_api_key(conn: &PgConnection, key: &str) -> QueryResult<bool> {
+pub fn check_api_key(conn: &PgConnection, key: &str) -> QueryResult<Option<(i32, Option<String>)>> {
     let hash = Blake2b::digest(key.as_bytes());
-    select(exists(api_keys::table.filter(api_keys::hash.eq(&hash[..])))).get_result::<bool>(conn)
+    Ok(api_keys::table
+        .filter(api_keys::write_access)
+        .filter(api_keys::hash.eq(&hash[..]))
+        .select((api_keys::id, api_keys::note))
+        .first(conn)
+        .optional()?)
+}
+
+pub fn check_api_key_r(
+    conn: &PgConnection,
+    key: &str,
+) -> QueryResult<Option<(i32, Option<String>)>> {
+    let hash = Blake2b::digest(key.as_bytes());
+    Ok(api_keys::table
+        .filter(api_keys::hash.eq(&hash[..]))
+        .select((api_keys::id, api_keys::note))
+        .first(conn)
+        .optional()?)
 }

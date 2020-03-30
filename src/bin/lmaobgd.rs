@@ -5,6 +5,7 @@ use actix_web_httpauth::extractors::basic::BasicAuth;
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use lmaobgd::{actions, models};
+use log::info;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -20,18 +21,16 @@ async fn api_upload(
 ) -> Result<HttpResponse, actix_web::Error> {
     let db = web::block(move || pool.get()).await?;
     let db = Arc::new(Mutex::new(db));
-    if auth.user_id() != "lmaobgd_api" {
-        return Err(HttpResponse::Unauthorized().into());
-    }
-    let key = auth
-        .password()
-        .ok_or_else(|| HttpResponse::Unauthorized())?
-        .clone();
+    let key = auth.user_id().clone();
     let db2 = Arc::clone(&db);
-    let result = web::block(move || actions::check_api_key(&db2.lock().unwrap(), &key)).await?;
-    if !result {
-        return Err(HttpResponse::Unauthorized().into());
-    }
+    let (id, note) = web::block(move || actions::check_api_key(&db2.lock().unwrap(), &key))
+        .await?
+        .ok_or_else(|| HttpResponse::Unauthorized())?;
+    info!(
+        "api access id={} note={}",
+        id,
+        note.as_deref().unwrap_or("")
+    );
     web::block(move || actions::upload_call(&db.lock().unwrap(), json)).await?;
     Ok(HttpResponse::Ok().finish())
 }
@@ -39,9 +38,21 @@ async fn api_upload(
 #[get("/data")]
 async fn api_data(
     pool: web::Data<DbPool>,
+    auth: BasicAuth,
 ) -> Result<web::Json<HashMap<i32, i32>>, actix_web::Error> {
     let db = web::block(move || pool.get()).await?;
-    let data = web::block(move || actions::get_data(&db)).await?;
+    let db = Arc::new(Mutex::new(db));
+    let db2 = Arc::clone(&db);
+    let key = auth.user_id().clone();
+    let (id, note) = web::block(move || actions::check_api_key_r(&db2.lock().unwrap(), &key))
+        .await?
+        .ok_or_else(|| HttpResponse::Unauthorized())?;
+    info!(
+        "api access id={} note={}",
+        id,
+        note.as_deref().unwrap_or("")
+    );
+    let data = web::block(move || actions::get_data(&db.lock().unwrap())).await?;
     Ok(web::Json(data))
 }
 
@@ -53,18 +64,16 @@ async fn api_set_reviewed(
 ) -> Result<HttpResponse, actix_web::Error> {
     let db = web::block(move || pool.get()).await?;
     let db = Arc::new(Mutex::new(db));
-    if auth.user_id() != "lmaobgd_api" {
-        return Err(HttpResponse::Unauthorized().into());
-    }
-    let key = auth
-        .password()
-        .ok_or_else(|| HttpResponse::Unauthorized())?
-        .clone();
+    let key = auth.user_id().clone();
     let db2 = Arc::clone(&db);
-    let result = web::block(move || actions::check_api_key(&db2.lock().unwrap(), &key)).await?;
-    if !result {
-        return Err(HttpResponse::Unauthorized().into());
-    }
+    let (id, note) = web::block(move || actions::check_api_key(&db2.lock().unwrap(), &key))
+        .await?
+        .ok_or_else(|| HttpResponse::Unauthorized())?;
+    info!(
+        "api access id={} note={}",
+        id,
+        note.as_deref().unwrap_or("")
+    );
     web::block(move || actions::set_reviewed(&db.lock().unwrap(), &ids)).await?;
     Ok(HttpResponse::Ok().finish())
 }

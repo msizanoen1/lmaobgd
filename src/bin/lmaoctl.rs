@@ -76,25 +76,68 @@ fn process_answer2(s: &str) -> String {
 
 #[derive(StructOpt)]
 enum Command {
+    /// Open review interface
     Review,
+    /// Inspect data
     ViewData,
-    DeleteQuestion { id: i32 },
+    /// Delete a question by id
+    DeleteQuestion {
+        /// Id of the question
+        id: i32,
+    },
+    /// Dump answer text to current directory
     Dump,
+    /// Collapse data of tests with same title
     Collapse,
-    ApiKey,
+    /// Generate a new api key
+    ApiKey {
+        /// Allow write access
+        #[structopt(short, long)]
+        write: bool,
+        /// Note for key
+        #[structopt(short, long)]
+        note: Option<String>,
+    },
+    /// List api keys by id and note
+    LsApi,
+    /// Remove an api key by id
+    RmApi {
+        /// API key id to remove
+        id: i32,
+    },
 }
 
+/// Command line interface for LmaoBGD administration.
 #[derive(StructOpt)]
 struct Args {
+    /// URL for database connection
     #[structopt(short, long, env = "DATABASE_URL", hide_env_values = true)]
     database_url: String,
+    /// Command to execute
     #[structopt(subcommand)]
     command: Command,
 }
 
-fn new_api_key(db: PgConnection) -> Result<(), failure::Error> {
-    let key = gen_api_key(&db)?;
+fn new_api_key(db: PgConnection, write: bool, note: Option<String>) -> Result<(), failure::Error> {
+    let key = gen_api_key(&db, note.as_deref(), write)?;
     println!("{}", key);
+    Ok(())
+}
+
+fn ls_api(db: PgConnection) -> Result<(), failure::Error> {
+    let apis = api_keys::table.load::<ApiKey>(&db)?;
+    for key in apis {
+        print!("id={} write_access={}", key.id, key.write_access);
+        if let Some(note) = key.note {
+            print!(" (note: {})", note);
+        }
+        println!();
+    }
+    Ok(())
+}
+
+fn rm_api(db: PgConnection, id: i32) -> Result<(), failure::Error> {
+    diesel::delete(api_keys::table.find(id)).execute(&db)?;
     Ok(())
 }
 
@@ -109,7 +152,9 @@ fn main() -> Result<(), ExitFailure> {
         Command::DeleteQuestion { id } => del_question(db, id)?,
         Command::Dump => dump(db)?,
         Command::Collapse => collapse(db)?,
-        Command::ApiKey => new_api_key(db)?,
+        Command::ApiKey { write, note } => new_api_key(db, write, note)?,
+        Command::LsApi => ls_api(db)?,
+        Command::RmApi { id } => rm_api(db, id)?,
     }
     Ok(())
 }

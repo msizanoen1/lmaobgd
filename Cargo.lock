@@ -1116,6 +1116,7 @@ dependencies = [
  "failure",
  "futures",
  "hex",
+ "log",
  "once_cell",
  "r2d2",
  "rand",

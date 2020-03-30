@@ -276,7 +276,7 @@ async fn run(
     let upload_url = format!("{}/upload", api);
     client
         .post(&upload_url)
-        .basic_auth("lmaobgd_api", Some(key))
+        .basic_auth(key, None::<&str>)
         .json(&js_api_data)
         .send()
         .await?
@@ -285,7 +285,7 @@ async fn run(
         let set_correct_url = format!("{}/set_reviewed", api);
         client
             .post(&set_correct_url)
-            .basic_auth("lmaobgd_api", Some(key))
+            .basic_auth(key, None::<&str>)
             .json(&correct)
             .send()
             .await?
