@@ -53,7 +53,7 @@ pub struct NewGroup<'a> {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsApiUpload {
-    pub group: i32,
+    pub group: Option<i32>,
     pub group_text: String,
     pub answer_map: HashMap<i32, String>,
     pub question_map: HashMap<i32, String>,
