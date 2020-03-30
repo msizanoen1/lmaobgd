@@ -149,6 +149,7 @@ async fn run(
     let data_url = format!("{}/data", api);
     let data = client
         .get(&data_url)
+        .basic_auth(key, None::<&str>)
         .send()
         .await?
         .error_for_status()?
