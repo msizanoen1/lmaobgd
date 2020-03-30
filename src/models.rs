@@ -1,14 +1,15 @@
 use crate::schema::*;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 #[derive(Insertable, Queryable, Clone)]
 #[table_name = "answers"]
-pub struct Answer {
+pub struct Answer<'a> {
     pub question_id: i32,
     pub answer_used: i32,
     pub reviewed: bool,
-    pub test_id: i32,
+    pub test: Cow<'a, str>,
     pub valid_answers: Vec<i32>,
 }
 
@@ -24,9 +25,8 @@ pub struct QuestionMap {
     pub question_string: String,
 }
 
-#[derive(Queryable, Clone)]
+#[derive(Queryable, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Group {
-    pub id: i32,
     pub text: String,
 }
 
@@ -47,7 +47,6 @@ pub struct NewQuestionMap<'a> {
 #[derive(Insertable)]
 #[table_name = "groups"]
 pub struct NewGroup<'a> {
-    pub id: i32,
     pub text: &'a str,
 }
 

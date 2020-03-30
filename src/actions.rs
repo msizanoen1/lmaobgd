@@ -9,6 +9,7 @@ use diesel::QueryResult;
 use digest::Digest;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 fn generate_api_key(length: u64) -> String {
@@ -70,13 +71,9 @@ pub fn upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
         .do_update()
         .set(question_strings::question_string.eq(excluded(question_strings::question_string)))
         .execute(conn)?;
-    let group = data.group;
     let group_text = data.group_text;
     diesel::insert_into(groups::table)
-        .values(&NewGroup {
-            id: group,
-            text: &group_text,
-        })
+        .values(&NewGroup { text: &group_text })
         .on_conflict_do_nothing()
         .execute(conn)?;
     let answers = data
@@ -87,7 +84,7 @@ pub fn upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
             answer_used: guess.answer_used,
             question_id: id,
             reviewed: false,
-            test_id: group,
+            test: Cow::from(&group_text),
         })
         .collect::<Vec<_>>();
     diesel::insert_into(answers::table)
@@ -97,7 +94,7 @@ pub fn upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
         .set((
             answers::answer_used.eq(excluded(answers::answer_used)),
             answers::reviewed.eq(false),
-            answers::test_id.eq(group),
+            answers::test.eq(&group_text),
             answers::valid_answers.eq(excluded(answers::valid_answers)),
         ))
         .execute(conn)?;

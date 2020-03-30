@@ -10,7 +10,7 @@ table! {
         question_id -> Int4,
         answer_used -> Int4,
         reviewed -> Bool,
-        test_id -> Int4,
+        test -> Text,
         valid_answers -> Array<Int4>,
     }
 }
@@ -25,8 +25,7 @@ table! {
 }
 
 table! {
-    groups (id) {
-        id -> Int4,
+    groups (text) {
         text -> Text,
     }
 }
@@ -39,7 +38,7 @@ table! {
 }
 
 joinable!(answers -> answer_strings (answer_used));
-joinable!(answers -> groups (test_id));
+joinable!(answers -> groups (test));
 joinable!(answers -> question_strings (question_id));
 
 allow_tables_to_appear_in_same_query!(

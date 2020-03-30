@@ -161,24 +161,8 @@ async fn run(
     let title_elem = wd
         .get_element(Using::CssSelector, "body .row .col-12 h1")
         .await?;
-    let id_elem = wd
-        .get_element(Using::CssSelector, "body .row .row .col-12 div")
-        .await?;
     let title = wd.get_element_text(&title_elem).await?;
-    let id_str = wd.get_element_text(&id_elem).await?;
-    let id = id_str
-        .rsplit(':')
-        .nth(0)
-        .map(|x| {
-            x.chars()
-                .filter(|x| x.is_digit(10))
-                .collect::<String>()
-                .parse()
-        })
-        .transpose()?
-        .unwrap_or(0);
     println!("Test name: {}", title);
-    println!("Test ID: {}", id);
     let questions = wd.get_elements(Using::CssSelector, ".question-box").await?;
     let mut question_maps = HashMap::new();
     let mut answer_of_questions = HashMap::new();
@@ -273,7 +257,7 @@ async fn run(
         })
         .collect::<HashMap<_, _>>();
     let js_api_data = JsApiUpload {
-        group: id,
+        group: 0,
         group_text: title,
         unknown_questions,
         answer_map: answer_maps,
