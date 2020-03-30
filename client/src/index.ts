@@ -30,13 +30,13 @@ class LmaoBGD {
     return payload;
   }
 
-  async upload(url = "http://localhost:5000/api/upload", key: string) {
+  async upload(url = "http://localhost:5000/api/upload", auth: string) {
     try {
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "text/json",
-          Authorization: `Basic ${btoa(`${key}:`)}`
+          Authorization: 'Basic ' + btoa(auth + ':')
         },
         body: JSON.stringify(this.serverPayload())
       });
@@ -50,11 +50,11 @@ class LmaoBGD {
     }
   }
 
-  async getData(url = "http://localhost:5000/api/data", key: string) {
+  async getData(url = "http://localhost:5000/api/data", auth: string) {
     try {
       const resp = await fetch(url, {
         headers: {
-          Authorization: `Basic ${btoa(`${key}:`)}`
+          Authorization: 'Basic ' + btoa(auth + ':')
         }
       });
       if (resp.ok) {
