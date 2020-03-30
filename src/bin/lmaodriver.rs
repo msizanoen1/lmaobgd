@@ -169,7 +169,12 @@ async fn run(
     let id = id_str
         .rsplit(':')
         .nth(0)
-        .map(|x| x.trim().parse::<i32>())
+        .map(|x| {
+            x.chars()
+                .filter(|x| x.is_digit(10))
+                .collect::<String>()
+                .parse()
+        })
         .transpose()?
         .unwrap_or(0);
     println!("Test name: {}", title);
