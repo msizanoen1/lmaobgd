@@ -88,7 +88,7 @@ fn api() -> actix_web::Scope {
 fn cors() -> actix_cors::CorsFactory {
     Cors::new()
         .allowed_methods(vec!["GET", "POST"])
-        .allowed_header(header::CONTENT_TYPE)
+        .allowed_headers(vec![header::CONTENT_TYPE, headers::AUTHORIZATION])
         .finish()
 }
 
