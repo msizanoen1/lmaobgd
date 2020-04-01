@@ -71,7 +71,7 @@ struct Args {
     #[structopt(short = "s", long)]
     no_submit: bool,
     /// Headless mode
-    #[structopt(short, long)]
+    #[structopt(short = "H", long)]
     headless: bool,
     /// Fetch question text even when in database
     #[structopt(short, long)]
