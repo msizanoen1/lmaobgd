@@ -8,6 +8,8 @@
   "private": true,
   "scripts": {
     "build": "webpack --mode production",
+    "build-babel": "webpack --mode production --env.babel=true",
+    "build-devel": "webpack --mode development",
     "tsc": "tsc"
   },
   "devDependencies": {
