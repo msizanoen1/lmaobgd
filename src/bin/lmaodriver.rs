@@ -62,7 +62,7 @@ struct Args {
     #[structopt(short = "k", long, env = "LMAOBGD_API_KEY", hide_env_values = true)]
     api_key: String,
     /// URL of API server
-    #[structopt(long, default_value = "http://localhost:5000/api")]
+    #[structopt(short = "A", long, default_value = "http://localhost:5000/api")]
     api_url: String,
     /// Dont't auto close after 30s
     #[structopt(short, long)]
