@@ -34,6 +34,17 @@ module.exports = function(env, argv) {
             return use;
           })(),
           exclude: /node_modules/
+        },
+        {
+          test: /\.jsx?$/,
+          use: babel
+            ? [
+                {
+                  loader: "babel-loader",
+                  options: babelOptions
+                }
+              ]
+            : []
         }
       ]
     },
@@ -42,7 +53,10 @@ module.exports = function(env, argv) {
     },
     output: {
       filename: "bundle.js",
-      path: path.resolve(__dirname, "dist")
+      path: path.resolve(__dirname, "dist"),
+      library: "LmaoBGD",
+      libraryTarget: "umd",
+      libraryExport: "default"
     },
     devtool: "source-map"
   };

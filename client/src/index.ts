@@ -1,4 +1,4 @@
-class LmaoBGD {
+export class LmaoBGD {
   questionIds: number[] = [];
   questionsMap: Map<number, string> = new Map();
   answersOfQuestion: Map<number, number[]> = new Map();
@@ -172,4 +172,4 @@ class LmaoBGD {
   }
 }
 
-(window as any).LmaoBGD = LmaoBGD;
+export default LmaoBGD
