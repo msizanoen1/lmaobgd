@@ -92,10 +92,13 @@ fn cors() -> actix_cors::CorsFactory {
         .finish()
 }
 
+/// LmaoBGD Web Service
 #[derive(StructOpt)]
 struct Args {
+    /// Address to bind to
     #[structopt(short, long, default_value = "0.0.0.0:5000")]
     bind: SocketAddr,
+    /// Database URL to use
     #[structopt(short, long, env, hide_env_values = true)]
     database_url: String,
 }
