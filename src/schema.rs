@@ -25,12 +25,6 @@ table! {
 }
 
 table! {
-    groups (text) {
-        text -> Text,
-    }
-}
-
-table! {
     question_strings (question_id) {
         question_id -> Int4,
         question_string -> Text,
@@ -38,13 +32,11 @@ table! {
 }
 
 joinable!(answers -> answer_strings (answer_used));
-joinable!(answers -> groups (test));
 joinable!(answers -> question_strings (question_id));
 
 allow_tables_to_appear_in_same_query!(
     answer_strings,
     answers,
     api_keys,
-    groups,
     question_strings,
 );

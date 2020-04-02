@@ -25,11 +25,6 @@ pub struct QuestionMap {
     pub question_string: String,
 }
 
-#[derive(Queryable, Clone, Eq, PartialEq, PartialOrd, Ord)]
-pub struct Group {
-    pub text: String,
-}
-
 #[derive(Insertable)]
 #[table_name = "answer_strings"]
 pub struct NewAnswerMap<'a> {
@@ -42,12 +37,6 @@ pub struct NewAnswerMap<'a> {
 pub struct NewQuestionMap<'a> {
     pub question_id: i32,
     pub question_string: &'a str,
-}
-
-#[derive(Insertable)]
-#[table_name = "groups"]
-pub struct NewGroup<'a> {
-    pub text: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]

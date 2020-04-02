@@ -1,4 +1,4 @@
-use diesel::dsl::{exists, not};
+use diesel::dsl::not;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
@@ -9,7 +9,7 @@ use lmaobgd::display::*;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
 use lmaobgd::sql_funcs::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{stdin, Write};
 use structopt::StructOpt;
@@ -99,11 +99,10 @@ fn main() -> Result<(), ExitFailure> {
 fn dump(db: PgConnection) -> Result<(), failure::Error> {
     let answers: HashMap<String, HashMap<String, String>> = answers::table
         .filter(answers::reviewed)
-        .inner_join(groups::table)
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
         .select((
-            groups::text,
+            answers::test,
             question_strings::question_string,
             answer_strings::answer_string,
         ))
@@ -133,32 +132,38 @@ fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
-    Ok(groups::table
-        .filter(exists(
-            answers::table.filter(groups::text.eq(answers::test)),
-        ))
-        .load(db)
-        .context("unable to get groups")?)
+fn groups(db: &PgConnection) -> Result<Vec<String>, failure::Error> {
+    let mut result = answers::table
+        .select(answers::test)
+        .load::<String>(db)
+        .context("unable to get groups")?
+        .into_iter()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    result.sort();
+    Ok(result)
 }
 
-fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
-    Ok(groups::table
-        .filter(exists(
-            answers::table
-                .filter(groups::text.eq(answers::test))
-                .filter(not(answers::reviewed)),
-        ))
-        .load(db)
-        .context("unable to get groups")?)
+fn group_unrev(db: &PgConnection) -> Result<Vec<String>, failure::Error> {
+    let mut result = answers::table
+        .filter(not(answers::reviewed))
+        .select(answers::test)
+        .load::<String>(db)
+        .context("unable to get groups")?
+        .into_iter()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    result.sort();
+    Ok(result)
 }
 
 fn view(db: PgConnection) -> Result<(), failure::Error> {
-    let mut groups = groups(&db)?;
-    groups.sort();
+    let groups = groups(&db)?;
     println!("Tests available:");
     for (idx, group) in groups.iter().enumerate() {
-        println!("{} ({})", idx, group.text);
+        println!("{} ({})", idx, group);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
@@ -166,8 +171,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     let id: usize = input.trim().parse()?;
     let text = &groups
         .get(id)
-        .ok_or_else(|| failure::format_err!("Invalid group"))?
-        .text;
+        .ok_or_else(|| failure::format_err!("Invalid group"))?;
     let answers = answers::table
         .filter(answers::test.eq(text))
         .inner_join(question_strings::table)
@@ -221,11 +225,10 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
 }
 
 fn review(db: PgConnection) -> Result<(), failure::Error> {
-    let mut groups = group_unrev(&db)?;
-    groups.sort();
+    let groups = group_unrev(&db)?;
     println!("Tests available:");
     for (idx, group) in groups.iter().enumerate() {
-        println!("{} ({})", idx, group.text);
+        println!("{} ({})", idx, group);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
@@ -233,8 +236,7 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
     let id = input.trim().parse::<usize>()?;
     let text = &groups
         .get(id)
-        .ok_or_else(|| failure::format_err!("Invalid group"))?
-        .text;
+        .ok_or_else(|| failure::format_err!("Invalid group"))?;
     let unreviewed = answers::table
         .filter(not(answers::reviewed))
         .filter(answers::test.eq(text))

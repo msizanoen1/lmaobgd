@@ -72,10 +72,6 @@ pub fn upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
         .set(question_strings::question_string.eq(excluded(question_strings::question_string)))
         .execute(conn)?;
     let group_text = data.group_text;
-    diesel::insert_into(groups::table)
-        .values(&NewGroup { text: &group_text })
-        .on_conflict_do_nothing()
-        .execute(conn)?;
     let answers = data
         .unknown_questions
         .into_iter()
