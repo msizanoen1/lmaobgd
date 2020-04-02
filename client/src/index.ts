@@ -1,13 +1,13 @@
 export class LmaoBGD {
-  questionIds: number[] = [];
-  questionsMap: Map<number, string> = new Map();
-  answersOfQuestion: Map<number, number[]> = new Map();
-  answersMap: Map<number, string> = new Map();
-  unknownQuestions: Map<number, number> = new Map();
-  groupText = "";
-  groupId = 0;
+  private questionIds: number[] = [];
+  private questionsMap: Map<number, string> = new Map();
+  private answersOfQuestion: Map<number, number[]> = new Map();
+  private answersMap: Map<number, string> = new Map();
+  private unknownQuestions: Map<number, number> = new Map();
+  private groupText = "";
+  private groupId = 0;
 
-  serverPayload() {
+  private serverPayload() {
     const payload: any = {
       questionMap: {},
       answerMap: {},
@@ -30,13 +30,14 @@ export class LmaoBGD {
     return payload;
   }
 
-  async upload(url = "http://localhost:5000/api/upload", auth: string) {
+  public async upload(url = "http://localhost:5000/api/upload", auth: string) {
+    const encoded = btoa(auth + ":");
     try {
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "text/json",
-          Authorization: "Basic " + btoa(auth + ":")
+          Authorization: "Basic " + encoded
         },
         body: JSON.stringify(this.serverPayload())
       });
@@ -50,11 +51,12 @@ export class LmaoBGD {
     }
   }
 
-  async getData(url = "http://localhost:5000/api/data", auth: string) {
+  public async getData(url = "http://localhost:5000/api/data", auth: string) {
+    const encoded = btoa(auth + ":");
     try {
       const resp = await fetch(url, {
         headers: {
-          Authorization: "Basic " + btoa(auth + ":")
+          Authorization: "Basic " + encoded
         }
       });
       if (resp.ok) {
@@ -70,7 +72,7 @@ export class LmaoBGD {
     }
   }
 
-  static async run(api = "http://localhost:5000/api", key: string) {
+  public static async run(api = "http://localhost:5000/api", key: string) {
     const lmao = new LmaoBGD();
     lmao.runScrape();
     await lmao.getData(`${api}/data`, key);
@@ -78,12 +80,12 @@ export class LmaoBGD {
     await lmao.upload(`${api}/upload`, key);
   }
 
-  constructor(
+  public constructor(
     private answersData = new Map<number, number>(),
     private isInBrowser = false
   ) {}
 
-  runScrape() {
+  public runScrape() {
     const titleSelector = "body .row .col-12 h1";
     const idSelector = "body .row .row .col-12 div";
     const titleElem = document.querySelector(
@@ -140,7 +142,7 @@ export class LmaoBGD {
     }
   }
 
-  fillAnswer() {
+  public fillAnswer() {
     for (const key of this.answersOfQuestion.keys()) {
       const text = this.questionsMap.get(key);
       console.log(`Answering ${key} (${text})`);
@@ -172,4 +174,4 @@ export class LmaoBGD {
   }
 }
 
-export default LmaoBGD
+export default LmaoBGD;
