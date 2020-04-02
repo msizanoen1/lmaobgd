@@ -9,7 +9,8 @@ const babelOptions = {
         corejs: 3
       }
     ]
-  ]
+  ],
+  plugins: ["@babel/plugin-transform-runtime"]
 };
 
 module.exports = function(env, argv) {
@@ -44,7 +45,8 @@ module.exports = function(env, argv) {
                   options: babelOptions
                 }
               ]
-            : []
+            : [],
+          exclude: /node_modules/
         }
       ]
     },
