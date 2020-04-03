@@ -1,4 +1,4 @@
-use diesel::dsl::not;
+use diesel::dsl::{exists, not};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
@@ -9,7 +9,7 @@ use lmaobgd::display::*;
 use lmaobgd::models::*;
 use lmaobgd::schema::*;
 use lmaobgd::sql_funcs::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{stdin, Write};
 use structopt::StructOpt;
@@ -133,22 +133,20 @@ fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn groups(db: &PgConnection) -> Result<Vec<i32>, failure::Error> {
-    let result = groups::table.select(groups::id).load(db)?;
+fn groups(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
+    let result = groups::table.load(db)?;
     Ok(result)
 }
 
-fn group_unrev(db: &PgConnection) -> Result<Vec<i32>, failure::Error> {
-    let result = answers::table
-        .filter(not(answers::reviewed))
-        .inner_join(groups::table)
-        .select(groups::id)
-        .load::<i32>(db)
-        .context("unable to get groups")?
-        .into_iter()
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>();
+fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
+    let result = groups::table
+        .filter(exists(
+            answers::table
+                .filter(not(answers::reviewed))
+                .filter(groups::id.eq(answers::test)),
+        ))
+        .load::<Group>(db)
+        .context("unable to get groups")?;
     Ok(result)
 }
 
@@ -156,17 +154,14 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
     let groups = groups(&db)?;
     println!("Tests available:");
     for (idx, group) in groups.iter().enumerate() {
-        println!("{} ({})", idx, group);
+        println!("{} ({})", idx, group.text);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
-    let id: usize = input.trim().parse()?;
-    let text = &groups
-        .get(id)
-        .ok_or_else(|| failure::format_err!("Invalid group"))?;
+    let id: i32 = input.trim().parse()?;
     let answers = answers::table
-        .filter(answers::test.eq(text))
+        .filter(answers::test.eq(id))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
         .select((
@@ -221,18 +216,15 @@ fn review(db: PgConnection) -> Result<(), failure::Error> {
     let groups = group_unrev(&db)?;
     println!("Tests available:");
     for (idx, group) in groups.iter().enumerate() {
-        println!("{} ({})", idx, group);
+        println!("{} ({})", idx, group.text);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
-    let id = input.trim().parse::<usize>()?;
-    let text = &groups
-        .get(id)
-        .ok_or_else(|| failure::format_err!("Invalid group"))?;
+    let id = input.trim().parse::<i32>()?;
     let unreviewed = answers::table
         .filter(not(answers::reviewed))
-        .filter(answers::test.eq(text))
+        .filter(answers::test.eq(id))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
         .select((

@@ -70,3 +70,15 @@ pub struct NewApiKey<'a> {
     pub write_access: bool,
     pub note: Option<&'a str>,
 }
+
+#[derive(Queryable, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Group {
+    pub id: i32,
+    pub text: String,
+}
+
+#[derive(Insertable)]
+#[table_name = "groups"]
+pub struct Groups<'a> {
+    pub text: &'a str,
+}
