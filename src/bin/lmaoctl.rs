@@ -99,10 +99,11 @@ fn main() -> Result<(), ExitFailure> {
 fn dump(db: PgConnection) -> Result<(), failure::Error> {
     let answers: HashMap<String, HashMap<String, String>> = answers::table
         .filter(answers::reviewed)
+        .inner_join(groups::table)
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
         .select((
-            answers::test,
+            groups::text,
             question_strings::question_string,
             answer_strings::answer_string,
         ))
@@ -132,30 +133,22 @@ fn del_question(db: PgConnection, id: i32) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn groups(db: &PgConnection) -> Result<Vec<String>, failure::Error> {
-    let mut result = answers::table
-        .select(answers::test)
-        .load::<String>(db)
-        .context("unable to get groups")?
-        .into_iter()
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>();
-    result.sort();
+fn groups(db: &PgConnection) -> Result<Vec<i32>, failure::Error> {
+    let result = groups::table.select(groups::id).load(db)?;
     Ok(result)
 }
 
-fn group_unrev(db: &PgConnection) -> Result<Vec<String>, failure::Error> {
-    let mut result = answers::table
+fn group_unrev(db: &PgConnection) -> Result<Vec<i32>, failure::Error> {
+    let result = answers::table
         .filter(not(answers::reviewed))
-        .select(answers::test)
-        .load::<String>(db)
+        .inner_join(groups::table)
+        .select(groups::id)
+        .load::<i32>(db)
         .context("unable to get groups")?
         .into_iter()
         .collect::<HashSet<_>>()
         .into_iter()
         .collect::<Vec<_>>();
-    result.sort();
     Ok(result)
 }
 

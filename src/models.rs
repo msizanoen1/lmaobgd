@@ -1,15 +1,14 @@
 use crate::schema::*;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::collections::HashMap;
 
 #[derive(Insertable, Queryable, Clone)]
 #[table_name = "answers"]
-pub struct Answer<'a> {
+pub struct Answer {
     pub question_id: i32,
     pub answer_used: i32,
     pub reviewed: bool,
-    pub test: Cow<'a, str>,
+    pub test: i32,
     pub valid_answers: Vec<i32>,
 }
 
