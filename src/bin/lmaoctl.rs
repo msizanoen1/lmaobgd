@@ -153,8 +153,8 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
 fn view(db: PgConnection) -> Result<(), failure::Error> {
     let groups = groups(&db)?;
     println!("Tests available:");
-    for (idx, group) in groups.iter().enumerate() {
-        println!("{} ({})", idx, group.text);
+    for group in groups {
+        println!("{} ({})", group.id, group.text);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
@@ -215,8 +215,8 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
 fn review(db: PgConnection) -> Result<(), failure::Error> {
     let groups = group_unrev(&db)?;
     println!("Tests available:");
-    for (idx, group) in groups.iter().enumerate() {
-        println!("{} ({})", idx, group.text);
+    for group in groups {
+        println!("{} ({})", group.id, group.text);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
