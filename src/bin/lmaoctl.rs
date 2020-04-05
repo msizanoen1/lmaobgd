@@ -184,7 +184,7 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
         .filter(answer_strings::answer_id.eq(any(&all_ans_ids)))
         .load(&db)?
         .into_iter()
-        .map(|(k, v): (i32, String)| (k, process_question(&v)))
+        .map(|(k, v): (i32, String)| (k, process_answer(&v)))
         .collect::<HashMap<i32, String>>();
     let mut question_cache_text = HashMap::new();
     let mut question_cache = HashMap::new();
