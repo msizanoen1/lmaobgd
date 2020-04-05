@@ -10,6 +10,7 @@ use digest::Digest;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 fn generate_api_key(length: u64) -> String {
     static CHARS: Lazy<Vec<char>> = Lazy::new(|| {
@@ -74,22 +75,22 @@ pub fn upload_call(conn: &PgConnection, data: JsApiUpload) -> QueryResult<()> {
     let id = if let Ok(id) = diesel::insert_into(groups::table)
         .values(groups::text.eq(group_text))
         .returning(groups::id)
-        .get_result::<i32>(conn)
+        .get_result::<Uuid>(conn)
     {
         id
     } else {
         groups::table
             .filter(groups::text.eq(group_text))
             .select(groups::id)
-            .first::<i32>(conn)?
+            .first::<Uuid>(conn)?
     };
     let answers = data
         .unknown_questions
         .into_iter()
-        .map(|(id, guess)| Answer {
+        .map(|(qid, guess)| Answer {
             valid_answers: guess.answers.clone(),
             answer_used: guess.answer_used,
-            question_id: id,
+            question_id: qid,
             reviewed: false,
             test: id,
         })
@@ -142,7 +143,10 @@ pub fn gen_api_key(
     Ok(key)
 }
 
-pub fn check_api_key(conn: &PgConnection, key: &str) -> QueryResult<Option<(i32, Option<String>)>> {
+pub fn check_api_key(
+    conn: &PgConnection,
+    key: &str,
+) -> QueryResult<Option<(Uuid, Option<String>)>> {
     let hash = Blake2b::digest(key.as_bytes());
     Ok(api_keys::table
         .filter(api_keys::write_access)
@@ -155,7 +159,7 @@ pub fn check_api_key(conn: &PgConnection, key: &str) -> QueryResult<Option<(i32,
 pub fn check_api_key_r(
     conn: &PgConnection,
     key: &str,
-) -> QueryResult<Option<(i32, Option<String>)>> {
+) -> QueryResult<Option<(Uuid, Option<String>)>> {
     let hash = Blake2b::digest(key.as_bytes());
     Ok(api_keys::table
         .filter(api_keys::hash.eq(&hash[..]))

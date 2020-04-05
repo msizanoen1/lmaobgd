@@ -581,15 +581,16 @@ dependencies = [
 
 [[package]]
 name = "diesel"
-version = "1.4.3"
+version = "1.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d7cc03b910de9935007861dce440881f69102aaaedfd4bc5a6f40340ca5840c"
+checksum = "33d7ca63eb2efea87a7f56a283acc49e2ce4b2bd54adf7465dc1d81fef13d8fc"
 dependencies = [
  "bitflags",
  "byteorder",
  "diesel_derives",
  "pq-sys",
  "r2d2",
+ "uuid",
 ]
 
 [[package]]
@@ -1126,6 +1127,7 @@ dependencies = [
  "serde_json",
  "structopt",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -2178,6 +2180,12 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
+
+[[package]]
+name = "uuid"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
 
 [[package]]
 name = "vcpkg"

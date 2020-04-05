@@ -5,7 +5,8 @@ authors = ["msizanoen1 <qtmlabs@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
-diesel = { version = "1.4.3", features = ["postgres", "r2d2"] }
+diesel = { version = "1.4.4", features = ["postgres", "r2d2", "uuidv07"] }
+uuid = "0.8.1"
 actix-web = "2.0.0"
 actix-rt = "1.0.0"
 serde_json = "1.0.48"

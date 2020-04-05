@@ -10,14 +10,14 @@ table! {
         question_id -> Int4,
         answer_used -> Int4,
         reviewed -> Bool,
-        test -> Int4,
+        test -> Uuid,
         valid_answers -> Array<Int4>,
     }
 }
 
 table! {
     api_keys (id) {
-        id -> Int4,
+        id -> Uuid,
         hash -> Bytea,
         write_access -> Bool,
         note -> Nullable<Text>,
@@ -26,7 +26,7 @@ table! {
 
 table! {
     groups (id) {
-        id -> Int4,
+        id -> Uuid,
         text -> Text,
     }
 }

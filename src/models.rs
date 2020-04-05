@@ -1,6 +1,7 @@
 use crate::schema::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Insertable, Queryable, Clone)]
 #[table_name = "answers"]
@@ -8,7 +9,7 @@ pub struct Answer {
     pub question_id: i32,
     pub answer_used: i32,
     pub reviewed: bool,
-    pub test: i32,
+    pub test: Uuid,
     pub valid_answers: Vec<i32>,
 }
 
@@ -57,7 +58,7 @@ pub struct UnknownQuestion {
 
 #[derive(Queryable, Clone)]
 pub struct ApiKey {
-    pub id: i32,
+    pub id: Uuid,
     pub hash: Vec<u8>,
     pub write_access: bool,
     pub note: Option<String>,
@@ -73,7 +74,7 @@ pub struct NewApiKey<'a> {
 
 #[derive(Queryable, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Group {
-    pub id: i32,
+    pub id: Uuid,
     pub text: String,
 }
 

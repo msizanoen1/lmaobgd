@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{stdin, Write};
 use structopt::StructOpt;
+use uuid::Uuid;
 
 #[derive(StructOpt)]
 enum Command {
@@ -41,7 +42,7 @@ enum Command {
     /// Remove an api key by id
     RmApi {
         /// API key id to remove
-        id: i32,
+        id: Uuid,
     },
 }
 
@@ -74,7 +75,7 @@ fn ls_api(db: PgConnection) -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn rm_api(db: PgConnection, id: i32) -> Result<(), failure::Error> {
+fn rm_api(db: PgConnection, id: Uuid) -> Result<(), failure::Error> {
     diesel::delete(api_keys::table.find(id)).execute(&db)?;
     Ok(())
 }
@@ -153,15 +154,16 @@ fn group_unrev(db: &PgConnection) -> Result<Vec<Group>, failure::Error> {
 fn view(db: PgConnection) -> Result<(), failure::Error> {
     let groups = groups(&db)?;
     println!("Tests available:");
-    for group in groups {
-        println!("{} ({})", group.id, group.text);
+    for (idx, group) in groups.iter().enumerate() {
+        println!("{} ({})", idx, group.text);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
-    let id: i32 = input.trim().parse()?;
+    let id: usize = input.trim().parse()?;
+    let uuid = groups[id].id;
     let answers = answers::table
-        .filter(answers::test.eq(id))
+        .filter(answers::test.eq(uuid))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
         .select((
@@ -221,16 +223,17 @@ fn view(db: PgConnection) -> Result<(), failure::Error> {
 fn review(db: PgConnection) -> Result<(), failure::Error> {
     let groups = group_unrev(&db)?;
     println!("Tests available:");
-    for group in groups {
-        println!("{} ({})", group.id, group.text);
+    for (idx, group) in groups.iter().enumerate() {
+        println!("{} ({})", idx, group.text);
     }
     println!("Select test DB ID:");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
-    let id = input.trim().parse::<i32>()?;
+    let id = input.trim().parse::<usize>()?;
+    let uuid = groups[id].id;
     let unreviewed = answers::table
         .filter(not(answers::reviewed))
-        .filter(answers::test.eq(id))
+        .filter(answers::test.eq(uuid))
         .inner_join(question_strings::table)
         .inner_join(answer_strings::table)
         .select((
