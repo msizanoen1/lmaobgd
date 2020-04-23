@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+#[derive(Clone)]
+struct RoDbPool(DbPool);
 
 #[post("/upload")]
 async fn api_upload(
@@ -37,10 +39,10 @@ async fn api_upload(
 
 #[get("/data")]
 async fn api_data(
-    pool: web::Data<DbPool>,
+    pool: web::Data<RoDbPool>,
     auth: BasicAuth,
 ) -> Result<web::Json<HashMap<i32, i32>>, actix_web::Error> {
-    let db = web::block(move || pool.get()).await?;
+    let db = web::block(move || pool.0.get()).await?;
     let db = Arc::new(Mutex::new(db));
     let db2 = Arc::clone(&db);
     let key = auth.user_id().clone();
@@ -101,6 +103,9 @@ struct Args {
     /// Database URL to use
     #[structopt(short, long, env, hide_env_values = true)]
     database_url: String,
+    /// Read-only database URL to use
+    #[structopt(short, long, env, hide_env_values = true)]
+    database_url_ro: Option<String>,
 }
 
 #[actix_rt::main]
@@ -111,10 +116,17 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
 
     let cm = ConnectionManager::new(&args.database_url);
     let pool = DbPool::builder().build(cm)?;
+    let pool_ro = if let Some(url) = args.database_url_ro {
+        let cm = ConnectionManager::new(&url);
+        DbPool::builder().build(cm)?
+    } else {
+        pool.clone()
+    };
 
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(RoDbPool(pool_ro.clone()))
             .app_data(web::Json::<models::JsApiUpload>::configure(|cfg| {
                 cfg.limit(128 * 1024 * 1024)
             }))
