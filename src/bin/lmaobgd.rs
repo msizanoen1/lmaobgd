@@ -115,10 +115,10 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let args = Args::from_args();
 
     let cm = ConnectionManager::new(&args.database_url);
-    let pool = DbPool::builder().build(cm)?;
+    let pool = DbPool::new(cm)?;
     let pool_ro = if let Some(url) = args.database_url_ro {
         let cm = ConnectionManager::new(&url);
-        DbPool::builder().build(cm)?
+        DbPool::new(cm)?
     } else {
         pool.clone()
     };
