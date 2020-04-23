@@ -106,6 +106,12 @@ struct Args {
     /// Read-only database URL to use
     #[structopt(short, long, env, hide_env_values = true)]
     database_url_ro: Option<String>,
+    /// Writable database connection pool size
+    #[structopt(short, long, default_value = "10")]
+    db_writable_pool_size: u32,
+    /// Read-only database connection pool size
+    #[structopt(short, long, default_value = "10")]
+    db_read_only_pool_size: u32,
 }
 
 #[actix_rt::main]
@@ -115,10 +121,14 @@ async fn main() -> Result<(), exitfailure::ExitFailure> {
     let args = Args::from_args();
 
     let cm = ConnectionManager::new(&args.database_url);
-    let pool = DbPool::new(cm)?;
+    let pool = DbPool::builder()
+        .max_size(args.db_writable_pool_size)
+        .build(cm)?;
     let pool_ro = if let Some(url) = args.database_url_ro {
         let cm = ConnectionManager::new(&url);
-        DbPool::new(cm)?
+        DbPool::builder()
+            .max_size(args.db_read_only_pool_size)
+            .build(cm)?
     } else {
         pool.clone()
     };
