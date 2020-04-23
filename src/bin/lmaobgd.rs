@@ -104,13 +104,13 @@ struct Args {
     #[structopt(short, long, env, hide_env_values = true)]
     database_url: String,
     /// Read-only database URL to use
-    #[structopt(short, long, env, hide_env_values = true)]
+    #[structopt(long, env, hide_env_values = true)]
     database_url_ro: Option<String>,
     /// Writable database connection pool size
-    #[structopt(short, long, default_value = "10")]
+    #[structopt(long, default_value = "10")]
     db_writable_pool_size: u32,
     /// Read-only database connection pool size
-    #[structopt(short, long, default_value = "10")]
+    #[structopt(long, default_value = "10")]
     db_read_only_pool_size: u32,
 }
 
