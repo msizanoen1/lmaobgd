@@ -58,6 +58,11 @@ async fn api_data(
     Ok(web::Json(data))
 }
 
+#[get("/check")]
+async fn api_check() -> HttpResponse {
+    HttpResponse::Ok().finish()
+}
+
 #[post("/set_reviewed")]
 async fn api_set_reviewed(
     pool: web::Data<DbPool>,
@@ -85,6 +90,7 @@ fn api() -> actix_web::Scope {
         .service(api_data)
         .service(api_upload)
         .service(api_set_reviewed)
+        .service(api_check)
 }
 
 fn cors() -> actix_cors::CorsFactory {
